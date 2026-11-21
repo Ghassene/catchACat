@@ -112,7 +112,7 @@ button:focus-visible { outline: 4px solid var(--sun); outline-offset: 3px; }
   <div class="sheet-wrap" id="menu">
     <div class="sheet">
       <h1>Attrape-Minou</h1>
-      <p>Des chats se cachent dans le jardin. Touche un chat quand il sort la tête pour lui lancer la balle !</p>
+      <p>Des chats se cachent partout. Touche un chat quand il sort la tête pour lui lancer la balle ! Tous les 15 chats, tu découvres un nouveau décor.</p>
       <div class="levels">
         <button class="big-btn lvl-small" id="play-small">Petit joueur<small>5 à 7 ans · chats lents</small></button>
         <button class="big-btn lvl-big" id="play-big">Grand joueur<small>8 à 10 ans · chats rapides</small></button>
@@ -187,6 +187,7 @@ const sfx = {
   pop: () => tone(520, 0.1, 'sine', 0.06, 820),
   miss: () => { tone(300, 0.14, 'sine', 0.16, 180); tone(200, 0.2, 'sine', 0.12, 120, 0.13); },
   catch: (p) => { [523, 659, 784, 1047].forEach((f, i) => tone(f, 0.2, 'triangle', 0.16, null, i * 0.07)); meow(0.3, p); },
+  hop: () => tone(380, 0.16, 'sine', 0.1, 950),
   fanfare: () => [523, 659, 784, 659, 784, 1047].forEach((f, i) => tone(f, 0.22, 'square', 0.07, null, 0.6 + i * 0.11)),
 };
 
@@ -195,6 +196,13 @@ const cv = document.getElementById('scene');
 let g = cv.getContext('2d');
 let W = 0, H = 0, DPR = 1, S = 40;
 let spots = [];
+const SCENES = [
+  { id: 'garden', name: 'le jardin', portrait: ['pot', 'bush', 'box', 'bush', 'pot'], land: ['box', 'bush', 'pot', 'bush', 'box'] },
+  { id: 'house', name: 'la maison', portrait: ['basket', 'box', 'pot', 'basket', 'box'], land: ['basket', 'pot', 'box', 'box', 'basket'] },
+  { id: 'roof', name: 'le toit la nuit', portrait: ['chimney', 'chimney', 'chimney', 'chimney', 'chimney'], land: ['chimney', 'chimney', 'chimney', 'chimney', 'chimney'] },
+];
+const SCENE_EVERY = 15;
+let sceneIdx = 0;
 const clouds = [{ x: .1, y: .1, k: 1 }, { x: .55, y: .06, k: .8 }, { x: .85, y: .16, k: 1.15 }];
 
 function layout() {
@@ -206,9 +214,10 @@ function layout() {
   const back = H * 0.47, front = H * 0.67;
   const portrait = W < H;
   const defs = portrait
-    ? [[.2, back, .78, 'pot'], [.5, back - H * .02, .78, 'bush'], [.8, back, .78, 'box'], [.28, front, 1, 'bush'], [.72, front, 1, 'pot']]
-    : [[.17, back, .8, 'box'], [.5, back - H * .02, .8, 'bush'], [.83, back, .8, 'pot'], [.33, front, 1, 'bush'], [.67, front, 1, 'box']];
-  spots = defs.map(([fx, top, k, kind], i) => ({ x: fx * W, top, s: S * k, kind, cat: old[i] ? old[i].cat : null }));
+    ? [[.2, back, .78], [.5, back - H * .02, .78], [.8, back, .78], [.28, front, 1], [.72, front, 1]]
+    : [[.17, back, .8], [.5, back - H * .02, .8], [.83, back, .8], [.33, front, 1], [.67, front, 1]];
+  const kinds = portrait ? SCENES[sceneIdx].portrait : SCENES[sceneIdx].land;
+  spots = defs.map(([fx, top, k], i) => ({ i, x: fx * W, top, s: S * k, kind: kinds[i], cat: old[i] ? old[i].cat : null }));
 }
 window.addEventListener('resize', layout);
 
@@ -226,7 +235,7 @@ function heart(x, y, r) {
 }
 
 function drawCat(x, y, s, c, opts = {}) {
-  const { blink = false, happy = false, sil = false, tilt = 0 } = opts;
+  const { blink = false, happy = false, sil = false, tilt = 0, wink = false, shy = false } = opts;
   g.save(); g.translate(x, y); g.rotate(tilt);
   g.lineJoin = 'round'; g.lineCap = 'round';
   const line = sil ? 'rgba(47,37,64,.25)' : INK;
@@ -264,11 +273,12 @@ function drawCat(x, y, s, c, opts = {}) {
   g.beginPath(); g.ellipse(0, 0, 1.05 * s, .92 * s, 0, 0, TAU); g.lineWidth = s * .07; g.strokeStyle = line; g.stroke();
   if (sil) { g.restore(); return; }
   // cheeks
-  g.fillStyle = 'rgba(255,120,150,.32)'; circle(-.68 * s, .25 * s, .16 * s); g.fill(); circle(.68 * s, .25 * s, .16 * s); g.fill();
+  g.fillStyle = shy ? 'rgba(255,90,130,.6)' : 'rgba(255,120,150,.32)'; const cr = shy ? .2 : .16;
+  circle(-.68 * s, .25 * s, cr * s); g.fill(); circle(.68 * s, .25 * s, cr * s); g.fill();
   // eyes
   for (const side of [-1, 1]) {
     const ex = side * .42 * s, ey = -.12 * s;
-    if (blink || happy) {
+    if (blink || happy || (wink && side > 0)) {
       g.beginPath();
       if (happy) { g.moveTo(ex - .2 * s, ey + .06 * s); g.quadraticCurveTo(ex, ey - .22 * s, ex + .2 * s, ey + .06 * s); }
       else { g.moveTo(ex - .2 * s, ey); g.quadraticCurveTo(ex, ey + .12 * s, ex + .2 * s, ey); }
@@ -309,12 +319,15 @@ function drawSpotBack(sp) {
   const { x, top, s, kind } = sp;
   if (kind === 'box') { g.fillStyle = '#8A5A2E'; g.fillRect(x - 1.55 * s, top - .28 * s, 3.1 * s, .4 * s); }
   if (kind === 'pot') { g.beginPath(); g.ellipse(x, top, 1.65 * s, .3 * s, 0, 0, TAU); g.fillStyle = '#5B3424'; g.fill(); }
+  if (kind === 'basket') { g.beginPath(); g.ellipse(x, top, 1.7 * s, .32 * s, 0, 0, TAU); g.fillStyle = '#7A5426'; g.fill(); }
+  if (kind === 'chimney') { g.fillStyle = '#2A1D22'; g.fillRect(x - 1.4 * s, top - .2 * s, 2.8 * s, .4 * s); }
 }
+const CHIMNEY = ['#B5523B', '#8C5A8A', '#5A7BA8', '#B5523B', '#6E8F5A'];
 function drawSpotFront(sp, t) {
   const { x, top, s, kind } = sp;
   g.lineWidth = s * .08; g.strokeStyle = INK; g.lineJoin = 'round';
   // shadow
-  g.beginPath(); g.ellipse(x, top + 2.6 * s, 2 * s, .32 * s, 0, 0, TAU); g.fillStyle = 'rgba(30,80,30,.25)'; g.fill();
+  if (kind !== 'chimney') { g.beginPath(); g.ellipse(x, top + 2.6 * s, 2 * s, .32 * s, 0, 0, TAU); g.fillStyle = 'rgba(40,30,30,.22)'; g.fill(); }
   if (kind === 'bush') {
     const blobs = [[-1.25, 1.15, .9], [-.55, .72, 1.0], [.55, .78, 1.0], [1.25, 1.2, .9], [0, 1.55, 1.25]];
     g.fillStyle = '#3F9A3D';
@@ -347,6 +360,37 @@ function drawSpotFront(sp, t) {
     // little sprout
     g.strokeStyle = '#3F9A3D'; g.lineWidth = s * .1; g.beginPath(); g.moveTo(x + 1.3 * s, top - .1 * s); g.quadraticCurveTo(x + 1.5 * s, top - .7 * s, x + 1.25 * s, top - 1.0 * s); g.stroke();
     g.fillStyle = '#5DBB52'; g.beginPath(); g.ellipse(x + 1.45 * s, top - .75 * s, .28 * s, .13 * s, -.6, 0, TAU); g.fill();
+  } else if (kind === 'basket') {
+    g.beginPath(); g.moveTo(x - 1.7 * s, top + .2 * s); g.lineTo(x + 1.7 * s, top + .2 * s); g.lineTo(x + 1.4 * s, top + 2.6 * s); g.lineTo(x - 1.4 * s, top + 2.6 * s); g.closePath();
+    g.fillStyle = '#E2B66E'; g.fill();
+    g.save(); g.clip();
+    g.strokeStyle = '#B8873F'; g.lineWidth = s * .07;
+    for (let r = 0; r < 6; r++) { const yy = top + .5 * s + r * .38 * s; g.beginPath(); g.moveTo(x - 1.8 * s, yy); g.lineTo(x + 1.8 * s, yy); g.stroke(); }
+    for (let c = -4; c <= 4; c++) { g.beginPath(); g.moveTo(x + c * .4 * s, top + .2 * s); g.lineTo(x + c * .34 * s, top + 2.6 * s); g.stroke(); }
+    g.restore();
+    g.strokeStyle = INK; g.lineWidth = s * .08;
+    g.beginPath(); g.moveTo(x - 1.7 * s, top + .2 * s); g.lineTo(x + 1.7 * s, top + .2 * s); g.lineTo(x + 1.4 * s, top + 2.6 * s); g.lineTo(x - 1.4 * s, top + 2.6 * s); g.closePath(); g.stroke();
+    g.beginPath(); g.roundRect ? g.roundRect(x - 1.85 * s, top - .15 * s, 3.7 * s, .5 * s, .25 * s) : g.rect(x - 1.85 * s, top - .15 * s, 3.7 * s, .5 * s);
+    g.fillStyle = '#C9944A'; g.fill(); g.stroke();
+    for (const side of [-1, 1]) { g.beginPath(); g.ellipse(x + side * 1.05 * s, top + .85 * s, .32 * s, .14 * s, 0, 0, TAU); g.fillStyle = '#7A5426'; g.fill(); g.stroke(); }
+    // a sock hanging out
+    g.fillStyle = '#4FA3E0'; g.beginPath(); g.roundRect ? g.roundRect(x + 1.2 * s, top - .05 * s, .35 * s, .9 * s, .15 * s) : g.rect(x + 1.2 * s, top - .05 * s, .35 * s, .9 * s); g.fill(); g.stroke();
+  } else if (kind === 'chimney') {
+    const col = CHIMNEY[sp.i % CHIMNEY.length];
+    g.fillStyle = col; g.fillRect(x - 1.4 * s, top + .3 * s, 2.8 * s, 2.6 * s);
+    g.strokeStyle = 'rgba(0,0,0,.25)'; g.lineWidth = s * .05;
+    for (let r = 0; r < 6; r++) {
+      const yy = top + .3 * s + r * .45 * s; g.beginPath(); g.moveTo(x - 1.4 * s, yy); g.lineTo(x + 1.4 * s, yy); g.stroke();
+      for (let c = 0; c < 4; c++) { const xx = x - 1.4 * s + (c + (r % 2 ? .5 : 0)) * .8 * s; if (xx > x - 1.4 * s && xx < x + 1.4 * s) { g.beginPath(); g.moveTo(xx, yy); g.lineTo(xx, yy + .45 * s); g.stroke(); } }
+    }
+    g.strokeStyle = INK; g.lineWidth = s * .08; g.strokeRect(x - 1.4 * s, top + .3 * s, 2.8 * s, 2.6 * s);
+    g.fillStyle = '#4A3038'; g.fillRect(x - 1.7 * s, top - .15 * s, 3.4 * s, .5 * s); g.strokeRect(x - 1.7 * s, top - .15 * s, 3.4 * s, .5 * s);
+    if (!sp.cat) {
+      for (let i = 0; i < 3; i++) {
+        const ph = (t * .5 + i / 3 + sp.i * .17) % 1;
+        g.fillStyle = `rgba(220,220,240,${.45 * (1 - ph)})`; circle(x + Math.sin(ph * 6 + i) * .3 * s, top - .4 * s - ph * 2.2 * s, (.25 + ph * .4) * s); g.fill();
+      }
+    }
   }
 }
 
@@ -363,6 +407,78 @@ function drawBall(x, y, r, spin = 0) {
 }
 
 function drawBackground(t) {
+  const id = SCENES[sceneIdx].id;
+  if (id === 'house') return drawHouse(t);
+  if (id === 'roof') return drawRoof(t);
+  drawGarden(t);
+}
+function drawHouse(t) {
+  const floorY = H * .44;
+  g.fillStyle = '#FCE3C8'; g.fillRect(0, 0, W, H);
+  g.fillStyle = 'rgba(255,150,120,.16)';
+  for (let x = 0; x < W; x += S * 1.3) g.fillRect(x, 0, S * .55, floorY);
+  // window
+  const ww = Math.min(W * .3, S * 5), wh = ww * .8, wx = W * .1, wy = H * .1;
+  g.fillStyle = '#8FD3F4'; g.fillRect(wx, wy, ww, wh);
+  g.fillStyle = '#FFFFFF'; const cx = wx + ((t * 8) % ww);
+  g.save(); g.beginPath(); g.rect(wx, wy, ww, wh); g.clip();
+  circle(cx, wy + wh * .35, ww * .1); g.fill(); circle(cx + ww * .1, wy + wh * .3, ww * .12); g.fill(); circle(cx + ww * .2, wy + wh * .36, ww * .09); g.fill();
+  circle(wx + ww * .8, wy + wh * .25, ww * .1); g.fillStyle = '#FFD45A'; g.fill();
+  g.restore();
+  g.lineWidth = S * .14; g.strokeStyle = '#FFFFFF'; g.strokeRect(wx, wy, ww, wh);
+  g.beginPath(); g.moveTo(wx + ww / 2, wy); g.lineTo(wx + ww / 2, wy + wh); g.moveTo(wx, wy + wh / 2); g.lineTo(wx + ww, wy + wh / 2); g.stroke();
+  g.lineWidth = 2; g.strokeStyle = 'rgba(47,37,64,.4)'; g.strokeRect(wx - S * .07, wy - S * .07, ww + S * .14, wh + S * .14);
+  g.fillStyle = '#FF8FB1';
+  for (const side of [0, 1]) { const x0 = side ? wx + ww + S * .3 : wx - S * .3; g.beginPath(); g.moveTo(x0, wy - S * .3); g.lineTo(x0 + (side ? -ww * .28 : ww * .28), wy - S * .3); g.lineTo(x0, wy + wh + S * .2); g.closePath(); g.fill(); }
+  g.fillStyle = '#C48A50'; g.fillRect(wx - S * .5, wy - S * .45, ww + S, S * .18);
+  // picture of a fish
+  const px = W * .7, py = H * .13, pw = S * 2.4, ph = S * 1.8;
+  g.fillStyle = '#FFF9EC'; g.fillRect(px, py, pw, ph); g.lineWidth = S * .16; g.strokeStyle = '#C48A50'; g.strokeRect(px, py, pw, ph);
+  g.fillStyle = '#4FA3E0'; g.beginPath(); g.ellipse(px + pw * .45, py + ph * .5, pw * .22, ph * .2, 0, 0, TAU); g.fill();
+  g.beginPath(); g.moveTo(px + pw * .65, py + ph * .5); g.lineTo(px + pw * .82, py + ph * .32); g.lineTo(px + pw * .82, py + ph * .68); g.closePath(); g.fill();
+  circle(px + pw * .35, py + ph * .45, S * .07); g.fillStyle = INK; g.fill();
+  // floor
+  g.fillStyle = '#FFFFFF'; g.fillRect(0, floorY - S * .3, W, S * .3);
+  const fl = g.createLinearGradient(0, floorY, 0, H); fl.addColorStop(0, '#D9A066'); fl.addColorStop(1, '#C2864D');
+  g.fillStyle = fl; g.fillRect(0, floorY, W, H - floorY);
+  g.strokeStyle = 'rgba(120,70,30,.35)'; g.lineWidth = 2;
+  for (let y = floorY, r = 0; y < H; y += S * .9, r++) {
+    g.beginPath(); g.moveTo(0, y); g.lineTo(W, y); g.stroke();
+    for (let x = (r % 2) * S * 2; x < W; x += S * 4) { g.beginPath(); g.moveTo(x, y); g.lineTo(x, y + S * .9); g.stroke(); }
+  }
+  g.fillStyle = '#7FC8E8'; g.beginPath(); g.ellipse(W / 2, H * .74, W * .42, H * .11, 0, 0, TAU); g.fill();
+  g.setLineDash([S * .3, S * .2]); g.strokeStyle = '#FFFFFF'; g.lineWidth = S * .1; g.beginPath(); g.ellipse(W / 2, H * .74, W * .38, H * .09, 0, 0, TAU); g.stroke(); g.setLineDash([]);
+}
+function drawRoof(t) {
+  const hz = H * .44;
+  const sky = g.createLinearGradient(0, 0, 0, hz); sky.addColorStop(0, '#141A40'); sky.addColorStop(1, '#3A3F7E');
+  g.fillStyle = sky; g.fillRect(0, 0, W, H);
+  for (let i = 0; i < 45; i++) {
+    const x = ((i * 137.5) % 100) / 100 * W, y = ((i * 61.7) % 42) / 100 * H + S * .3;
+    g.globalAlpha = .45 + .55 * Math.abs(Math.sin(t * 1.5 + i)); g.fillStyle = '#FFF6C8'; star(x, y, S * .07 * (1 + i % 3)); g.fill();
+  }
+  g.globalAlpha = 1;
+  const mx = W * .84, my = H * .12, mr = S * 1.2;
+  g.fillStyle = 'rgba(255,241,176,.18)'; circle(mx, my, mr * 1.5); g.fill();
+  g.fillStyle = '#FFF1B0'; circle(mx, my, mr); g.fill();
+  g.fillStyle = 'rgba(200,180,110,.35)'; circle(mx - mr * .3, my - mr * .2, mr * .2); g.fill(); circle(mx + mr * .3, my + mr * .3, mr * .14); g.fill();
+  // city
+  g.fillStyle = '#262B5A';
+  for (let i = 0, x = 0; x < W; i++) {
+    const bw = S * (1.4 + (i * 7 % 5) * .35), bh = S * (1.2 + (i * 11 % 7) * .4);
+    g.fillRect(x, hz - bh, bw - 3, bh);
+    g.fillStyle = '#FFD45A';
+    for (let wy = hz - bh + S * .3; wy < hz - S * .3; wy += S * .55) for (let wx = x + S * .25; wx < x + bw - S * .4; wx += S * .5) if (((wx + wy) | 0) % 3 === 0) g.fillRect(wx, wy, S * .2, S * .25);
+    g.fillStyle = '#262B5A'; x += bw;
+  }
+  // roof
+  g.fillStyle = '#A8473A'; g.fillRect(0, hz, W, H - hz);
+  g.strokeStyle = 'rgba(60,20,20,.35)'; g.lineWidth = 2;
+  for (let y = hz + S * .6, r = 0; y < H + S; y += S * .7, r++)
+    for (let x = (r % 2) * S * .55 - S; x < W + S; x += S * 1.1) { g.beginPath(); g.arc(x, y, S * .55, 0, Math.PI); g.stroke(); }
+  g.fillStyle = '#7A3A2C'; g.fillRect(0, hz, W, S * .35);
+}
+function drawGarden(t) {
   const sky = g.createLinearGradient(0, 0, 0, H * .5); sky.addColorStop(0, '#6CC3EE'); sky.addColorStop(1, '#BFE9FA');
   g.fillStyle = sky; g.fillRect(0, 0, W, H);
   // sun
@@ -396,7 +512,11 @@ function drawBackground(t) {
 /* ---------- game state ---------- */
 let mode = 'menu';            // 'menu' | 'play' | 'collection'
 let level = LEVELS.small;
-let score = 0, spawnIn = 1, hintT = 0, thrown = false, lastT = 0, clock = 0;
+let score = 0, spawnIn = 1, hintT = 0, thrown = false, lastT = 0, clock = 0, sceneChangeIn = 0, saidHop = false;
+function changeScene(i) {
+  sceneIdx = i; spots.forEach(s => s.cat = null); layout(); spawnIn = 1.2;
+  confetti(); sfx.fanfare(); showToast(`Nouveau décor : ${SCENES[i].name} !`, true);
+}
 const balls = [], parts = [];
 
 function rnd(a, b) { return a + Math.random() * (b - a); }
@@ -405,14 +525,15 @@ function pickCat() {
   if (total + score >= 4 && Math.random() < .07) return CATS[CATS.length - 1];
   const pool = CATS.filter(c => !c.rare); return pool[Math.floor(Math.random() * pool.length)];
 }
-function headY(sp, pop) { return sp.top + 2.0 * sp.s - pop * 2.6 * sp.s; }
+function headY(sp, pop, k = 1) { return sp.top + 2.0 * sp.s - pop * (2.0 + .6 * k) * sp.s; }
 function ease(x) { x = Math.max(0, Math.min(1, x)); return 1 - Math.pow(1 - x, 3); }
 function popOf(cat) {
   if (cat.state === 'caught') return cat.popAtCatch;
   const a = cat.age, d = cat.dur, up = .35;
-  if (a < up) return ease(a / up) * 1.08 - Math.max(0, (a / up) - .85) * .3;
-  if (a > d - up) return ease((d - a) / up);
-  return 1;
+  const m = cat.maxPop || 1;
+  if (a < up) return m * (ease(a / up) * 1.08 - Math.max(0, (a / up) - .85) * .3);
+  if (a > d - up) return m * ease((d - a) / up);
+  return m;
 }
 
 function spawn() {
@@ -422,7 +543,10 @@ function spawn() {
   if (!free.length) return;
   const sp = free[Math.floor(Math.random() * free.length)];
   const type = pickCat();
-  sp.cat = { type, age: 0, dur: (mode === 'play' ? level.dur : 3) * (type.rare ? .8 : 1) * rnd(.9, 1.15), state: 'up', blinkAt: rnd(.6, 1.6), ct: 0, popAtCatch: 0 };
+  let trait = 'normal';
+  if (mode === 'play') { const r = Math.random(); trait = r < .12 ? 'kitten' : r < .27 ? 'clever' : r < .42 ? 'shy' : 'normal'; }
+  sp.cat = { type, trait, k: trait === 'kitten' ? .7 : 1, maxPop: trait === 'shy' ? .8 : 1, hopped: false,
+    age: 0, dur: (mode === 'play' ? level.dur : 3) * (type.rare ? .8 : 1) * rnd(.9, 1.15), state: 'up', blinkAt: rnd(.6, 1.6), ct: 0, popAtCatch: 0 };
   if (mode === 'play') sfx.pop();
 }
 
@@ -440,22 +564,25 @@ function resolve(b) {
   for (const sp of spots) {
     const c = sp.cat; if (!c || c.state !== 'up') continue;
     const pop = popOf(c); if (pop < .35) continue;
-    const hy = headY(sp, pop), d = Math.hypot(b.tx - sp.x, b.ty - (hy - .2 * sp.s));
+    const hy = headY(sp, pop, c.k), d = Math.hypot(b.tx - sp.x, b.ty - (hy - .2 * sp.s * c.k));
     if (d < level.hit * sp.s && d < bestD) { best = sp; bestD = d; }
   }
   if (best) {
     const c = best.cat; c.state = 'caught'; c.popAtCatch = popOf(c); c.ct = 0;
     b.state = 'held'; b.t = 0; b.spot = best;
-    b.tx = best.x; b.ty = headY(best, c.popAtCatch);
+    b.tx = best.x; b.ty = headY(best, c.popAtCatch, c.k);
     const isNew = !save.counts[c.type.id];
     save.counts[c.type.id] = (save.counts[c.type.id] || 0) + 1; persist();
-    score++; updateScore();
+    const before = score; score += c.trait === 'kitten' ? 2 : 1; updateScore();
     for (let i = 0; i < 9; i++) parts.push({ kind: 'heart', x: b.tx + rnd(-1, 1) * best.s, y: b.ty, vx: rnd(-40, 40), vy: rnd(-160, -90), life: 1.2, r: best.s * rnd(.18, .3), col: ['#FF6FA8', '#FF8FB1', '#E8577A'][i % 3] });
     for (let i = 0; i < 12; i++) { const a = rnd(0, TAU), sp = rnd(120, 260); parts.push({ kind: 'star', x: b.tx, y: b.ty, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, life: .7, r: best.s * rnd(.12, .22), col: '#FFC93C' }); }
     sfx.catch(c.type.id === 'nuage' ? 1.15 : c.type.id === 'reglisse' ? .85 : 1);
     if (isNew) showToast(`Nouveau chat : ${c.type.name} !`, true);
+    else if (c.trait === 'kitten') showToast(`Un chaton ! +2`, true);
+    else if (c.trait === 'clever') showToast(`Bravo, ${c.type.name} le malin !`);
     else showToast(c.type.rare ? `Waouh, ${c.type.name} !` : `Tu as attrapé ${c.type.name} !`);
-    if (score % 10 === 0) { setTimeout(() => showToast(`Bravo ! ${score} chats !`, true), 1300); confetti(); sfx.fanfare(); }
+    if (Math.floor(score / SCENE_EVERY) > Math.floor(before / SCENE_EVERY)) sceneChangeIn = 1.4;
+    else if (Math.floor(score / 10) > Math.floor(before / 10)) { const sc = score; setTimeout(() => showToast(`Bravo ! ${sc} chats !`, true), 1300); confetti(); sfx.fanfare(); }
   } else {
     b.state = 'bounce'; b.t = 0; b.vx = rnd(-60, 60); b.vy = -S * 4; b.x = b.tx; b.y = b.ty; b.r = b.r0 * .55;
     sfx.miss();
@@ -475,8 +602,20 @@ function update(dt) {
   for (const sp of spots) {
     const c = sp.cat; if (!c) continue;
     if (c.state === 'caught') { c.ct += dt; if (c.ct > .75) sp.cat = null; continue; }
-    c.age += dt; if (c.age >= c.dur) sp.cat = null;
+    c.age += dt;
+    if (c.age >= c.dur) {
+      sp.cat = null;
+      if (c.trait === 'clever' && !c.hopped && mode === 'play') {
+        const free = spots.filter(s => !s.cat && s !== sp);
+        if (free.length) {
+          const ns = free[Math.floor(Math.random() * free.length)];
+          c.hopped = true; c.age = -.15; c.dur *= .8; ns.cat = c; sfx.hop();
+          if (!saidHop) { saidHop = true; showToast('Hop ! Un chat malin a changé de cachette !'); }
+        }
+      }
+    }
   }
+  if (sceneChangeIn > 0) { sceneChangeIn -= dt; if (sceneChangeIn <= 0) changeScene((sceneIdx + 1) % SCENES.length); }
   for (let i = balls.length - 1; i >= 0; i--) {
     const b = balls[i]; b.t += dt; b.spin += dt * 9;
     if (b.state === 'fly' && b.t >= b.dur) resolve(b);
@@ -499,18 +638,18 @@ function render() {
     drawSpotBack(sp);
     const c = sp.cat;
     if (c) {
-      const pop = popOf(c), hy = headY(sp, pop);
+      const pop = popOf(c), hy = headY(sp, pop, c.k), cs = sp.s * c.k;
       g.save(); g.beginPath(); g.rect(sp.x - 3 * sp.s, sp.top - 4 * sp.s, 6 * sp.s, 4 * sp.s + 2.2 * sp.s); g.clip();
       if (c.state === 'caught') {
         const k = 1 - ease(c.ct / .55);
-        if (k > .02) drawCat(sp.x, hy, sp.s * k, c.type, { happy: true, tilt: c.ct * 6 });
+        if (k > .02) drawCat(sp.x, hy, cs * k, c.type, { happy: true, tilt: c.ct * 6 });
       } else {
         const blink = (c.age % 2.4) > c.blinkAt && (c.age % 2.4) < c.blinkAt + .14;
-        drawCat(sp.x, hy + Math.sin(c.age * 5) * sp.s * .04, sp.s, c.type, { blink, tilt: Math.sin(c.age * 2.2) * .08 });
+        drawCat(sp.x, hy + Math.sin(c.age * 5) * sp.s * .04, cs, c.type, { blink, wink: c.trait === 'clever', shy: c.trait === 'shy', tilt: Math.sin(c.age * 2.2) * .08 });
       }
       g.restore();
       drawSpotFront(sp, clock);
-      if (c.state === 'up' && pop > .8) drawPaws(sp.x, sp.top + .05 * sp.s, sp.s, c.type);
+      if (c.state === 'up' && pop > .85) drawPaws(sp.x, sp.top + .05 * sp.s, cs, c.type);
       if (c.type.rare && c.state === 'up' && pop > .5) {
         g.fillStyle = '#FFF1A8';
         for (let i = 0; i < 3; i++) { const a = clock * 2 + i * TAU / 3; star(sp.x + Math.cos(a) * sp.s * 1.6, hy - .3 * sp.s + Math.sin(a) * sp.s * .9, sp.s * .18); g.fill(); }
@@ -524,7 +663,7 @@ function render() {
     if (!thrown && hintT > 1.2) {
       const target = spots.find(s => s.cat && s.cat.state === 'up' && popOf(s.cat) > .9);
       if (target) {
-        const tx = target.x + target.s * .9, ty = headY(target, 1) + target.s * .6 + Math.sin(clock * 6) * target.s * .15;
+        const tx = target.x + target.s * .9, ty = headY(target, 1, target.cat.k) + target.s * .6 + Math.sin(clock * 6) * target.s * .15;
         drawFinger(tx, ty, target.s);
       }
     }
@@ -580,8 +719,8 @@ function updateScore() {
   const el = $('score'); el.classList.remove('bump'); void el.offsetWidth; el.classList.add('bump');
 }
 function start(lv) {
-  audio(); level = LEVELS[lv]; score = 0; thrown = false; hintT = 0; updateScore();
-  spots.forEach(s => s.cat = null); balls.length = 0; spawnIn = .5;
+  audio(); level = LEVELS[lv]; score = 0; thrown = false; hintT = 0; sceneChangeIn = 0; saidHop = false; updateScore();
+  spots.forEach(s => s.cat = null); sceneIdx = 0; layout(); balls.length = 0; spawnIn = .5;
   mode = 'play'; menu.hidden = true; coll.hidden = true; hud.hidden = false;
 }
 let collFrom = 'menu';
@@ -609,7 +748,7 @@ function closeCollection() {
   coll.hidden = true;
   if (collFrom === 'play') { mode = 'play'; } else { mode = 'menu'; menu.hidden = false; }
 }
-function home() { mode = 'menu'; hud.hidden = true; coll.hidden = true; menu.hidden = false; balls.length = 0; }
+function home() { mode = 'menu'; hud.hidden = true; coll.hidden = true; menu.hidden = false; balls.length = 0; sceneChangeIn = 0; if (sceneIdx) { sceneIdx = 0; spots.forEach(s => s.cat = null); layout(); } }
 
 $('play-small').addEventListener('click', () => start('small'));
 $('play-big').addEventListener('click', () => start('big'));
@@ -630,6 +769,7 @@ document.addEventListener('dblclick', e => e.preventDefault());
 
 layout();
 requestAnimationFrame(frame);
+window.__attrape = { changeScene, get spots() { return spots; }, get score() { return score; } };
 })();
 </script>
 </body>
