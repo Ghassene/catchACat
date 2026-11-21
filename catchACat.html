@@ -47,10 +47,11 @@ canvas#scene { position: absolute; inset: 0; width: 100%; height: 100%; display:
 .icon-btn { width: 52px; height: 52px; border-radius: 16px; border: 3px solid var(--ink); background: var(--paper); box-shadow: 0 4px 0 var(--ink);
   display: grid; place-items: center; cursor: pointer; padding: 0; color: var(--ink); }
 .icon-btn svg { width: 28px; height: 28px; }
+@media (max-width: 420px) { .icon-btn { width: 44px; height: 44px; border-radius: 14px; } .icon-btn svg { width: 24px; height: 24px; } .tools { gap: 6px; } .score span { display: none; } .score { padding-right: 14px; } }
 .icon-btn:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--ink); }
 button:focus-visible { outline: 4px solid var(--sun); outline-offset: 3px; }
 
-#toast { position: absolute; left: 50%; top: 92px; transform: translate(-50%, -10px) scale(.9); opacity: 0; pointer-events: none;
+#toast { z-index: 5; position: absolute; left: 50%; top: 92px; transform: translate(-50%, -10px) scale(.9); opacity: 0; pointer-events: none;
   background: var(--sun); border: 3px solid var(--ink); border-radius: 20px; padding: 8px 22px; font-family: var(--display); font-size: 26px;
   white-space: nowrap; box-shadow: 0 4px 0 var(--ink); transition: opacity .2s, transform .25s cubic-bezier(.3,1.6,.5,1); max-width: calc(100% - 24px); overflow: hidden; text-overflow: ellipsis; }
 #toast.show { opacity: 1; transform: translate(-50%, 0) scale(1); }
@@ -75,6 +76,9 @@ button:focus-visible { outline: 4px solid var(--sun); outline-offset: 3px; }
 
 .grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
 @media (max-width: 460px) { .grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.hats-info { font-size: 16px; }
+.card { font: inherit; color: inherit; cursor: pointer; }
+.card.locked { cursor: default; }
 .card { background: #fff; border: 3px solid var(--ink); border-radius: 16px; padding: 6px 4px 8px; display: grid; gap: 2px; justify-items: center; }
 .card canvas { width: 100%; max-width: 110px; aspect-ratio: 1; }
 .card b { font-family: var(--display); font-size: 18px; line-height: 1; }
@@ -97,6 +101,9 @@ button:focus-visible { outline: 4px solid var(--sun); outline-offset: 3px; }
     <div class="tools">
       <button class="icon-btn" id="btn-collection" aria-label="Ma collection de chats">
         <svg viewBox="0 0 28 28" fill="currentColor" aria-hidden="true"><ellipse cx="14" cy="18.5" rx="6" ry="5"/><circle cx="6.5" cy="11.5" r="2.6"/><circle cx="11" cy="6.8" r="2.6"/><circle cx="17" cy="6.8" r="2.6"/><circle cx="21.5" cy="11.5" r="2.6"/></svg>
+      </button>
+      <button class="icon-btn" id="btn-music" aria-label="Couper la musique" aria-pressed="true">
+        <svg viewBox="0 0 28 28" fill="currentColor" aria-hidden="true"><path d="M10 5l13-3v16.5a3.5 3 0 1 1-2.4-2.8V7.3L12.4 9.2v11.3A3.5 3 0 1 1 10 17.7z"/><path id="music-off" d="M4 4l20 20" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" hidden/></svg>
       </button>
       <button class="icon-btn" id="btn-sound" aria-label="Couper le son">
         <svg viewBox="0 0 28 28" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 11h4l6-5v16l-6-5H4z" fill="currentColor"/><path id="wave" d="M18 10c1.5 1.2 1.5 6.8 0 8M21.5 7c3 2.6 3 11.4 0 14"/><path id="mute" d="M18 10l7 8M25 10l-7 8" hidden/></svg>
@@ -125,6 +132,7 @@ button:focus-visible { outline: 4px solid var(--sun); outline-offset: 3px; }
     <div class="sheet">
       <h2>Ma collection</h2>
       <p class="progress" id="coll-progress"></p>
+      <p class="hats-info" id="coll-hats"></p>
       <div class="grid" id="coll-grid"></div>
       <button class="big-btn lvl-big" id="coll-close">Retour</button>
     </div>
@@ -145,6 +153,12 @@ const CATS = [
   { id: 'moustache', name: 'Moustache', fur: '#757A86', dark: '#4C505A', light: '#FFFFFF', eye: '#7CC0E8', pattern: 'muzzle', whisk: '#FFFFFF' },
   { id: 'etoile',    name: 'Étoile',    fur: '#CDB0F2', dark: '#9A6FD8', light: '#FFF1A8', eye: '#FF6FA8', pattern: 'stars', rare: true },
 ];
+const HATS = [
+  { id: 'noeud', name: 'le nœud', at: 3 },
+  { id: 'couronne', name: 'la couronne', at: 10 },
+  { id: 'fete', name: 'le chapeau de fête', at: 25 },
+  { id: 'magicien', name: 'le chapeau de magicien', at: 50 },
+];
 const LEVELS = {
   small: { dur: 3.8, maxCats: 2, gap: [0.6, 1.4], hit: 1.75 },
   big:   { dur: 2.3, maxCats: 3, gap: [0.35, 1.0], hit: 1.25 },
@@ -152,8 +166,11 @@ const LEVELS = {
 
 /* ---------- save ---------- */
 const KEY = 'attrape-minou-v1';
-let save = { counts: {} };
-try { const raw = localStorage.getItem(KEY); if (raw) { const p = JSON.parse(raw); if (p && p.counts) save = p; } } catch (e) {}
+let save = { counts: {}, hats: {}, music: true };
+try { const raw = localStorage.getItem(KEY); if (raw) { const p = JSON.parse(raw); if (p && p.counts) save = Object.assign(save, p); } } catch (e) {}
+if (!save.hats) save.hats = {};
+function totalCaught() { return Object.values(save.counts).reduce((a, b) => a + b, 0); }
+function unlockedHats() { const t = totalCaught(); return HATS.filter(h => t >= h.at); }
 function persist() { try { localStorage.setItem(KEY, JSON.stringify(save)); } catch (e) {} }
 
 /* ---------- sound (synthesised, starts after a tap) ---------- */
@@ -182,6 +199,29 @@ function meow(delay = 0, pitch = 1) {
   g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(0.35, t0 + 0.05); g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.55);
   o.connect(f).connect(g).connect(a.destination); o.start(t0); o.stop(t0 + 0.6);
 }
+/* background music: a gentle looping tune, scheduled ahead on the audio clock */
+const TUNE = [[72, 1], [76, 1], [79, 2], [76, 1], [72, 1], [74, 2], [71, 1], [74, 1], [77, 2], [74, 1], [71, 1], [72, 2],
+  [76, 1], [79, 1], [81, 2], [79, 1], [76, 1], [77, 2], [74, 1], [71, 1], [72, 1], [74, 1], [72, 2], [0, 2]];
+const BASS = [48, 43, 45, 43];
+let musicTimer = 0, nextNote = 0, noteIdx = 0, beatCount = 0;
+function midi(n) { return 440 * Math.pow(2, (n - 69) / 12); }
+function musicTick() {
+  const a = audio(); if (!a) return;
+  const beat = .32;
+  while (nextNote < a.currentTime + .4) {
+    const [n, d] = TUNE[noteIdx % TUNE.length], delay = Math.max(0, nextNote - a.currentTime);
+    if (n) tone(midi(n), d * beat * .95, 'triangle', .045, null, delay);
+    for (let i = 0; i < d; i++) { if ((beatCount + i) % 4 === 0) tone(midi(BASS[Math.floor((beatCount + i) / 4) % BASS.length]), beat * 3.6, 'sine', .06, null, delay + i * beat); }
+    beatCount += d; nextNote += d * beat; noteIdx++;
+  }
+}
+function startMusic() {
+  stopMusic(); if (!save.music) return;
+  const a = audio(); if (!a) return;
+  nextNote = a.currentTime + .15; noteIdx = 0; beatCount = 0;
+  musicTimer = setInterval(musicTick, 120); musicTick();
+}
+function stopMusic() { clearInterval(musicTimer); musicTimer = 0; }
 const sfx = {
   throw: () => tone(260, 0.28, 'triangle', 0.14, 760),
   pop: () => tone(520, 0.1, 'sine', 0.06, 820),
@@ -235,7 +275,7 @@ function heart(x, y, r) {
 }
 
 function drawCat(x, y, s, c, opts = {}) {
-  const { blink = false, happy = false, sil = false, tilt = 0, wink = false, shy = false } = opts;
+  const { blink = false, happy = false, sil = false, tilt = 0, wink = false, shy = false, hat = null } = opts;
   g.save(); g.translate(x, y); g.rotate(tilt);
   g.lineJoin = 'round'; g.lineCap = 'round';
   const line = sil ? 'rgba(47,37,64,.25)' : INK;
@@ -304,7 +344,33 @@ function drawCat(x, y, s, c, opts = {}) {
   for (const side of [-1, 1]) for (const k of [-1, 0, 1]) {
     g.beginPath(); g.moveTo(side * .48 * s, .3 * s + k * .07 * s); g.lineTo(side * wl * s, .24 * s + k * .17 * s); g.stroke();
   }
+  if (hat) drawHat(hat, s);
   g.restore();
+}
+function poly(pts, s) { g.beginPath(); pts.forEach(([a, b], i) => i ? g.lineTo(a * s, b * s) : g.moveTo(a * s, b * s)); g.closePath(); }
+function drawHat(h, s) {
+  g.lineWidth = s * .06; g.strokeStyle = INK; g.lineJoin = 'round';
+  if (h === 'noeud') {
+    g.fillStyle = '#FF6FA8';
+    poly([[.55, -.78], [.15, -1.05], [.15, -.5]], s); g.fill(); g.stroke();
+    poly([[.55, -.78], [.95, -1.05], [.95, -.5]], s); g.fill(); g.stroke();
+    circle(.55 * s, -.78 * s, .13 * s); g.fill(); g.stroke();
+  } else if (h === 'couronne') {
+    poly([[-.5, -.72], [-.58, -1.28], [-.28, -1.02], [0, -1.4], [.28, -1.02], [.58, -1.28], [.5, -.72]], s);
+    g.fillStyle = '#FFC93C'; g.fill(); g.stroke();
+    g.fillStyle = '#E8577A'; circle(0, -.92 * s, .09 * s); g.fill();
+    g.fillStyle = '#4FA3E0'; circle(-.3 * s, -.85 * s, .07 * s); g.fill(); circle(.3 * s, -.85 * s, .07 * s); g.fill();
+  } else if (h === 'fete') {
+    poly([[-.38, -.78], [.38, -.78], [.12, -1.85]], s); g.fillStyle = '#4FA3E0'; g.fill();
+    g.save(); g.clip(); g.fillStyle = '#FFC93C';
+    for (let i = 0; i < 4; i++) { circle((-.15 + (i % 2) * .25) * s, (-.95 - i * .22) * s, .07 * s); g.fill(); }
+    g.restore(); poly([[-.38, -.78], [.38, -.78], [.12, -1.85]], s); g.stroke();
+    g.fillStyle = '#FF6FA8'; circle(.12 * s, -1.88 * s, .15 * s); g.fill(); g.stroke();
+  } else if (h === 'magicien') {
+    poly([[-.42, -.82], [.42, -.82], [.18, -1.95]], s); g.fillStyle = '#7B5CC8'; g.fill(); g.stroke();
+    g.beginPath(); g.ellipse(0, -.82 * s, .75 * s, .16 * s, 0, 0, TAU); g.fillStyle = '#5E43A6'; g.fill(); g.stroke();
+    star(.05 * s, -1.25 * s, .17 * s); g.fillStyle = '#FFE066'; g.fill();
+  }
 }
 
 function drawPaws(x, top, s, c) {
@@ -572,7 +638,10 @@ function resolve(b) {
     b.state = 'held'; b.t = 0; b.spot = best;
     b.tx = best.x; b.ty = headY(best, c.popAtCatch, c.k);
     const isNew = !save.counts[c.type.id];
+    const hatsBefore = unlockedHats().length;
     save.counts[c.type.id] = (save.counts[c.type.id] || 0) + 1; persist();
+    const newHats = unlockedHats();
+    if (newHats.length > hatsBefore) { const h = newHats[newHats.length - 1]; setTimeout(() => { showToast(`Nouveau chapeau : ${h.name} !`, true); sfx.fanfare(); }, 1600); }
     const before = score; score += c.trait === 'kitten' ? 2 : 1; updateScore();
     for (let i = 0; i < 9; i++) parts.push({ kind: 'heart', x: b.tx + rnd(-1, 1) * best.s, y: b.ty, vx: rnd(-40, 40), vy: rnd(-160, -90), life: 1.2, r: best.s * rnd(.18, .3), col: ['#FF6FA8', '#FF8FB1', '#E8577A'][i % 3] });
     for (let i = 0; i < 12; i++) { const a = rnd(0, TAU), sp = rnd(120, 260); parts.push({ kind: 'star', x: b.tx, y: b.ty, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, life: .7, r: best.s * rnd(.12, .22), col: '#FFC93C' }); }
@@ -642,10 +711,10 @@ function render() {
       g.save(); g.beginPath(); g.rect(sp.x - 3 * sp.s, sp.top - 4 * sp.s, 6 * sp.s, 4 * sp.s + 2.2 * sp.s); g.clip();
       if (c.state === 'caught') {
         const k = 1 - ease(c.ct / .55);
-        if (k > .02) drawCat(sp.x, hy, cs * k, c.type, { happy: true, tilt: c.ct * 6 });
+        if (k > .02) drawCat(sp.x, hy, cs * k, c.type, { happy: true, tilt: c.ct * 6, hat: save.hats[c.type.id] });
       } else {
         const blink = (c.age % 2.4) > c.blinkAt && (c.age % 2.4) < c.blinkAt + .14;
-        drawCat(sp.x, hy + Math.sin(c.age * 5) * sp.s * .04, cs, c.type, { blink, wink: c.trait === 'clever', shy: c.trait === 'shy', tilt: Math.sin(c.age * 2.2) * .08 });
+        drawCat(sp.x, hy + Math.sin(c.age * 5) * sp.s * .04, cs, c.type, { blink, wink: c.trait === 'clever', shy: c.trait === 'shy', hat: save.hats[c.type.id], tilt: Math.sin(c.age * 2.2) * .08 });
       }
       g.restore();
       drawSpotFront(sp, clock);
@@ -697,7 +766,8 @@ function drawFinger(x, y, s) {
   g.beginPath(); g.roundRect ? g.roundRect(-.45 * s, 0, .95 * s, .85 * s, .3 * s) : g.rect(-.45 * s, 0, .95 * s, .85 * s); g.fill(); g.stroke();
   g.restore();
   g.font = `800 ${Math.max(16, s * .6)}px "Baloo 2", system-ui, sans-serif`; g.textAlign = 'center'; g.lineWidth = 5; g.strokeStyle = '#fff'; g.fillStyle = INK;
-  const ty = y + s * 1.7; g.strokeText('Touche le chat !', x, ty); g.fillText('Touche le chat !', x, ty);
+  const ty = y + s * 1.7, half = g.measureText('Touche le chat !').width / 2 + 8, lx = Math.min(Math.max(x, half), W - half);
+  g.strokeText('Touche le chat !', lx, ty); g.fillText('Touche le chat !', lx, ty);
 }
 
 function frame(ts) {
@@ -722,6 +792,7 @@ function start(lv) {
   audio(); level = LEVELS[lv]; score = 0; thrown = false; hintT = 0; sceneChangeIn = 0; saidHop = false; updateScore();
   spots.forEach(s => s.cat = null); sceneIdx = 0; layout(); balls.length = 0; spawnIn = .5;
   mode = 'play'; menu.hidden = true; coll.hidden = true; hud.hidden = false;
+  startMusic();
 }
 let collFrom = 'menu';
 function openCollection() {
@@ -731,24 +802,39 @@ function openCollection() {
   let found = 0;
   CATS.forEach(c => {
     const n = save.counts[c.id] || 0; if (n) found++;
-    const card = document.createElement('div'); card.className = 'card' + (n ? '' : ' locked');
+    const card = document.createElement('button'); card.type = 'button'; card.className = 'card' + (n ? '' : ' locked');
+    if (!n) card.disabled = true;
     const cnv = document.createElement('canvas'); const px = 220; cnv.width = px; cnv.height = px;
     const name = document.createElement('b'); name.textContent = n ? c.name : '???';
     const cnt = document.createElement('span'); cnt.textContent = n ? `attrapé ${n} fois` : (c.rare ? 'très rare' : 'pas encore');
     card.append(cnv, name, cnt); grid.append(card);
     const cg = cnv.getContext('2d');
-    // draw with the shared helpers onto this small canvas
-    swapCtx(cg, () => drawCat(px / 2, px * .58, px * .3, n ? c : { fur: '#D3D8E2', pattern: 'plain' }, { sil: !n, happy: !!n }));
-    if (!n) { cg.font = `800 ${px * .3}px "Baloo 2", system-ui, sans-serif`; cg.textAlign = 'center'; cg.fillStyle = '#8F98A8'; cg.fillText('?', px / 2, px * .7); }
+    const paint = () => {
+      cg.clearRect(0, 0, px, px);
+      // draw with the shared helpers onto this small canvas
+      swapCtx(cg, () => drawCat(px / 2, px * .64, px * .27, n ? c : { fur: '#D3D8E2', pattern: 'plain' }, { sil: !n, happy: !!n, hat: n ? save.hats[c.id] : null }));
+      if (!n) { cg.font = `800 ${px * .3}px "Baloo 2", system-ui, sans-serif`; cg.textAlign = 'center'; cg.fillStyle = '#8F98A8'; cg.fillText('?', px / 2, px * .76); }
+    };
+    paint();
+    if (n) card.setAttribute('aria-label', `${c.name}, changer de chapeau`);
+    card.addEventListener('click', () => {
+      const opts = [null, ...unlockedHats().map(h => h.id)];
+      if (opts.length < 2) { showToast(`Attrape ${HATS[0].at} chats pour gagner un chapeau !`); return; }
+      const cur = opts.indexOf(save.hats[c.id] || null);
+      save.hats[c.id] = opts[(cur + 1) % opts.length]; persist(); paint(); sfx.pop();
+    });
   });
   $('coll-progress').textContent = `${found} chats sur ${CATS.length} trouvés`;
+  const t = totalCaught(), got = unlockedHats(), next = HATS.find(h => t < h.at);
+  $('coll-hats').textContent = (got.length ? `Chapeaux gagnés : ${got.length} sur ${HATS.length}. Touche un chat pour changer son chapeau !` : `Pas encore de chapeau.`)
+    + (next ? ` Prochain chapeau à ${next.at} chats (tu en as ${t}).` : ` Tu as tous les chapeaux !`);
 }
 function swapCtx(ctx, fn) { const keep = g; g = ctx; try { fn(); } finally { g = keep; } }
 function closeCollection() {
   coll.hidden = true;
   if (collFrom === 'play') { mode = 'play'; } else { mode = 'menu'; menu.hidden = false; }
 }
-function home() { mode = 'menu'; hud.hidden = true; coll.hidden = true; menu.hidden = false; balls.length = 0; sceneChangeIn = 0; if (sceneIdx) { sceneIdx = 0; spots.forEach(s => s.cat = null); layout(); } }
+function home() { stopMusic(); mode = 'menu'; hud.hidden = true; coll.hidden = true; menu.hidden = false; balls.length = 0; sceneChangeIn = 0; if (sceneIdx) { sceneIdx = 0; spots.forEach(s => s.cat = null); layout(); } }
 
 $('play-small').addEventListener('click', () => start('small'));
 $('play-big').addEventListener('click', () => start('big'));
@@ -756,6 +842,15 @@ $('menu-collection').addEventListener('click', openCollection);
 $('btn-collection').addEventListener('click', openCollection);
 $('coll-close').addEventListener('click', closeCollection);
 $('btn-home').addEventListener('click', home);
+function syncMusicBtn() {
+  $('music-off').hidden = !!save.music; $('btn-music').setAttribute('aria-pressed', save.music ? 'true' : 'false');
+  $('btn-music').setAttribute('aria-label', save.music ? 'Couper la musique' : 'Remettre la musique');
+}
+syncMusicBtn();
+$('btn-music').addEventListener('click', () => {
+  save.music = !save.music; persist(); syncMusicBtn();
+  if (save.music && (mode === 'play' || (mode === 'collection' && collFrom === 'play'))) startMusic(); else stopMusic();
+});
 $('btn-sound').addEventListener('click', () => {
   muted = !muted; $('wave').hidden = muted; $('mute').hidden = !muted;
   $('btn-sound').setAttribute('aria-label', muted ? 'Remettre le son' : 'Couper le son');
