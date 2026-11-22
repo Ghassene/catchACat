@@ -1344,7 +1344,8 @@ document.addEventListener('dblclick', e => e.preventDefault());
 
 layout();
 requestAnimationFrame(frame);
-window.__attrape = { changeScene, get spots() { return spots; }, get score() { return score; } };
+window.__attrape = { changeScene, get spots() { return spots; }, get score() { return score; },
+  drawOn(ctx, fn) { swapCtx(ctx, () => fn({ drawCat, drawBall, CATS, star, circle })); } };
 })();
 </script>
 </body>
