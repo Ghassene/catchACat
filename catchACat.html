@@ -151,6 +151,8 @@ const CATS = [
   { id: 'tigrou',    name: 'Tigrou',    fur: '#A3A3AD', dark: '#5A5A64', light: '#EAEAF0', eye: '#E0A030', pattern: 'stripes' },
   { id: 'pistache',  name: 'Pistache',  fur: '#FCF9F3', dark: '#37323D', light: '#F2A54A', eye: '#5BA84A', pattern: 'calico' },
   { id: 'moustache', name: 'Moustache', fur: '#757A86', dark: '#4C505A', light: '#FFFFFF', eye: '#7CC0E8', pattern: 'muzzle', whisk: '#FFFFFF' },
+  { id: 'caracal',   name: 'Caracal',   fur: '#D9A86C', dark: '#2E2A33', light: '#FFF6E8', eye: '#E0A030', pattern: 'caracal' },
+  { id: 'tuxedo',    name: 'Tuxedo',    fur: '#2B2730', dark: '#1A171E', light: '#FFFFFF', eye: '#7CD36A', pattern: 'tuxedo', whisk: '#FFFFFF' },
   { id: 'etoile',    name: 'Étoile',    fur: '#CDB0F2', dark: '#9A6FD8', light: '#FFF1A8', eye: '#FF6FA8', pattern: 'stars', rare: true },
 ];
 const HATS = [
@@ -284,8 +286,10 @@ function drawCat(x, y, s, c, opts = {}) {
   g.lineJoin = 'round'; g.lineCap = 'round';
   const line = sil ? 'rgba(47,37,64,.25)' : INK;
   // ears
+  const tall = c.pattern === 'caracal' ? 1.1 : 1;
   for (const side of [-1, 1]) {
-    g.beginPath(); g.moveTo(side * .98 * s, -.3 * s); g.lineTo(side * .78 * s, -1.42 * s); g.lineTo(side * .18 * s, -.82 * s); g.closePath();
+    if (c.pattern === 'caracal' && !sil) { g.beginPath(); g.moveTo(side * .78 * s, -1.42 * tall * s); g.lineTo(side * .84 * s, -1.78 * s); g.lineWidth = s * .11; g.strokeStyle = c.dark; g.stroke(); }
+    g.beginPath(); g.moveTo(side * .98 * s, -.3 * s); g.lineTo(side * .78 * s, -1.42 * tall * s); g.lineTo(side * .18 * s, -.82 * s); g.closePath();
     g.fillStyle = sil ? c.fur : (c.pattern === 'calico' ? (side < 0 ? c.dark : c.light) : c.fur); g.fill();
     g.lineWidth = s * .07; g.strokeStyle = line; g.stroke();
     if (!sil) { g.beginPath(); g.moveTo(side * .8 * s, -.5 * s); g.lineTo(side * .74 * s, -1.15 * s); g.lineTo(side * .4 * s, -.8 * s); g.closePath(); g.fillStyle = '#F6A5B8'; g.fill(); }
@@ -310,8 +314,19 @@ function drawCat(x, y, s, c, opts = {}) {
     }
     // muzzle
     g.fillStyle = c.light;
-    const mr = c.pattern === 'muzzle' ? .38 : .3;
+    const mr = c.pattern === 'muzzle' || c.pattern === 'tuxedo' ? .38 : .3;
     circle(-.22 * s, .32 * s, mr * s); g.fill(); circle(.22 * s, .32 * s, mr * s); g.fill();
+    if (c.pattern === 'tuxedo') {
+      g.beginPath(); g.moveTo(-.22 * s, .15 * s); g.lineTo(.22 * s, .15 * s); g.lineTo(0, -.75 * s); g.closePath(); g.fill();
+      g.beginPath(); g.ellipse(0, .72 * s, .45 * s, .3 * s, 0, 0, TAU); g.fill();
+    } else if (c.pattern === 'caracal') {
+      g.strokeStyle = c.dark; g.lineWidth = s * .07;
+      for (const side of [-1, 1]) {
+        g.beginPath(); g.moveTo(side * .26 * s, -.02 * s); g.quadraticCurveTo(side * .32 * s, .14 * s, side * .2 * s, .26 * s); g.stroke();
+        g.beginPath(); g.moveTo(side * .12 * s, -.5 * s); g.lineTo(side * .18 * s, -.8 * s); g.stroke();
+        g.fillStyle = c.dark; circle(side * .42 * s, .36 * s, .07 * s); g.fill();
+      }
+    }
     g.restore();
   }
   g.beginPath(); g.ellipse(0, 0, 1.05 * s, .92 * s, 0, 0, TAU); g.lineWidth = s * .07; g.strokeStyle = line; g.stroke();
