@@ -154,6 +154,9 @@ const CATS = [
   { id: 'caracal',   name: 'Caracal',   fur: '#D9A86C', dark: '#2E2A33', light: '#FFF6E8', eye: '#E0A030', pattern: 'caracal' },
   { id: 'tuxedo',    name: 'Tuxedo',    fur: '#2B2730', dark: '#1A171E', light: '#FFFFFF', eye: '#7CD36A', pattern: 'tuxedo', whisk: '#FFFFFF' },
   { id: 'etoile',    name: 'Étoile',    fur: '#CDB0F2', dark: '#9A6FD8', light: '#FFF1A8', eye: '#FF6FA8', pattern: 'stars', rare: true },
+  { id: 'poisson',   name: 'Poisson',   fur: '#7CC8E8', dark: '#3B86C4', light: '#E6F7FF', eye: '#FF9F43', pattern: 'fish', rare: true },
+  { id: 'soleil',    name: 'Soleil',    fur: '#FFD45A', dark: '#F28C28', light: '#FFF6D0', eye: '#E8577A', pattern: 'sun', rare: true },
+  { id: 'arcenciel', name: 'Multicolore', fur: '#FF6B6B', dark: '#FF6B6B', light: '#FFFFFF', eye: '#4FA3E0', pattern: 'rainbow', rare: true },
 ];
 const HATS = [
   { id: 'noeud', name: 'le nœud', at: 3 },
@@ -287,10 +290,23 @@ function drawCat(x, y, s, c, opts = {}) {
   const line = sil ? 'rgba(47,37,64,.25)' : INK;
   // ears
   const tall = c.pattern === 'caracal' ? 1.1 : 1;
+  if (!sil && c.pattern === 'sun') {
+    g.fillStyle = c.dark; g.strokeStyle = INK; g.lineWidth = s * .05;
+    for (let i = 0; i < 12; i++) {
+      const a = i * TAU / 12 + .13, w = .2;
+      g.beginPath(); g.moveTo(Math.cos(a - w) * 1.0 * s, Math.sin(a - w) * .88 * s); g.lineTo(Math.cos(a) * 1.5 * s, Math.sin(a) * 1.35 * s); g.lineTo(Math.cos(a + w) * 1.0 * s, Math.sin(a + w) * .88 * s); g.closePath();
+      g.fillStyle = i % 2 ? '#F28C28' : '#FFB020'; g.fill(); g.stroke();
+    }
+  }
+  if (!sil && c.pattern === 'fish') {
+    g.beginPath(); g.moveTo(-.35 * s, -.75 * s); g.quadraticCurveTo(-.25 * s, -1.5 * s, .1 * s, -1.55 * s); g.quadraticCurveTo(.2 * s, -1.1 * s, .38 * s, -.75 * s); g.closePath();
+    g.fillStyle = '#FF9F43'; g.fill(); g.lineWidth = s * .06; g.strokeStyle = INK; g.stroke();
+    g.lineWidth = s * .04; for (const k of [-.15, .02, .2]) { g.beginPath(); g.moveTo(k * s, -.8 * s); g.lineTo((k + .05) * s, -1.35 * s); g.stroke(); }
+  }
   for (const side of [-1, 1]) {
     if (c.pattern === 'caracal' && !sil) { g.beginPath(); g.moveTo(side * .78 * s, -1.42 * tall * s); g.lineTo(side * .84 * s, -1.78 * s); g.lineWidth = s * .11; g.strokeStyle = c.dark; g.stroke(); }
     g.beginPath(); g.moveTo(side * .98 * s, -.3 * s); g.lineTo(side * .78 * s, -1.42 * tall * s); g.lineTo(side * .18 * s, -.82 * s); g.closePath();
-    g.fillStyle = sil ? c.fur : (c.pattern === 'calico' ? (side < 0 ? c.dark : c.light) : c.fur); g.fill();
+    g.fillStyle = sil ? c.fur : (c.pattern === 'calico' ? (side < 0 ? c.dark : c.light) : c.pattern === 'rainbow' ? (side < 0 ? '#4FA3E0' : '#FFC93C') : c.fur); g.fill();
     g.lineWidth = s * .07; g.strokeStyle = line; g.stroke();
     if (!sil) { g.beginPath(); g.moveTo(side * .8 * s, -.5 * s); g.lineTo(side * .74 * s, -1.15 * s); g.lineTo(side * .4 * s, -.8 * s); g.closePath(); g.fillStyle = '#F6A5B8'; g.fill(); }
   }
@@ -308,6 +324,13 @@ function drawCat(x, y, s, c, opts = {}) {
     } else if (c.pattern === 'calico') {
       g.beginPath(); g.ellipse(-.62 * s, -.5 * s, .6 * s, .5 * s, .3, 0, TAU); g.fill();
       g.fillStyle = c.light; g.beginPath(); g.ellipse(.62 * s, -.52 * s, .55 * s, .48 * s, -.3, 0, TAU); g.fill();
+    } else if (c.pattern === 'rainbow') {
+      ['#FF6B6B', '#FFA94D', '#FFE066', '#7ED35A', '#4FA3E0', '#9A6FD8'].forEach((col, i) => { g.fillStyle = col; g.fillRect(-1.1 * s, (-.95 + i * .32) * s, 2.2 * s, .33 * s); });
+    } else if (c.pattern === 'fish') {
+      g.strokeStyle = c.light; g.lineWidth = s * .06;
+      for (let r = 0; r < 3; r++) for (let k = -3; k <= 3; k++) { const cx = (k * .32 + (r % 2) * .16) * s, cy = (-.75 + r * .25) * s; g.beginPath(); g.arc(cx, cy, .16 * s, 0, Math.PI); g.stroke(); }
+      g.strokeStyle = c.dark; g.lineWidth = s * .06;
+      for (const side of [-1, 1]) for (const k of [0, 1]) { const cx = side * (1.2 + k * .14) * s, a0 = side < 0 ? -.6 : Math.PI - .6; g.beginPath(); g.arc(cx, .12 * s, .35 * s, a0, a0 + 1.2); g.stroke(); }
     } else if (c.pattern === 'stars') {
       g.fillStyle = c.light;
       [[-.55, -.5, .16], [.5, -.6, .13], [.0, -.72, .1], [.75, -.1, .1], [-.8, -.05, .09]].forEach(([a, b, r]) => { star(a * s, b * s, r * s); g.fill(); });
@@ -817,7 +840,8 @@ const balls = [], parts = [];
 function rnd(a, b) { return a + Math.random() * (b - a); }
 function pickCat() {
   const total = Object.values(save.counts).reduce((a, b) => a + b, 0);
-  if (total + score >= 4 && Math.random() < .07) return CATS[CATS.length - 1];
+  const rares = CATS.filter(c => c.rare);
+  if (total + score >= 4 && Math.random() < .1) return rares[Math.floor(Math.random() * rares.length)];
   const pool = CATS.filter(c => !c.rare); return pool[Math.floor(Math.random() * pool.length)];
 }
 function headY(sp, pop, k = 1) { return sp.top + 2.0 * sp.s - pop * (2.0 + .6 * k) * sp.s; }
