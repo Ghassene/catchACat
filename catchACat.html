@@ -160,9 +160,15 @@ const CATS = [
 ];
 const HATS = [
   { id: 'noeud', name: 'le nœud', at: 3 },
+  { id: 'cacheoreilles', name: 'le cache-oreilles', at: 6 },
   { id: 'couronne', name: 'la couronne', at: 10 },
+  { id: 'perles', name: 'le collier de perles', at: 15 },
+  { id: 'ecailles', name: 'le chapeau à écailles', at: 20 },
   { id: 'fete', name: 'le chapeau de fête', at: 25 },
+  { id: 'pyjama', name: 'le pyjama', at: 35 },
   { id: 'magicien', name: 'le chapeau de magicien', at: 50 },
+  { id: 'roi', name: 'le costume de roi', at: 65 },
+  { id: 'lunaire', name: 'le costume lunaire', at: 80 },
 ];
 const LEVELS = {
   small: { dur: 3.8, maxCats: 2, gap: [0.6, 1.4], hit: 1.75 },
@@ -290,6 +296,7 @@ function drawCat(x, y, s, c, opts = {}) {
   const line = sil ? 'rgba(47,37,64,.25)' : INK;
   // ears
   const tall = c.pattern === 'caracal' ? 1.1 : 1;
+  if (!sil && hat) drawHatBehind(hat, s);
   if (!sil && c.pattern === 'sun') {
     g.fillStyle = c.dark; g.strokeStyle = INK; g.lineWidth = s * .05;
     for (let i = 0; i < 12; i++) {
@@ -390,8 +397,86 @@ function drawCat(x, y, s, c, opts = {}) {
   g.restore();
 }
 function poly(pts, s) { g.beginPath(); pts.forEach(([a, b], i) => i ? g.lineTo(a * s, b * s) : g.moveTo(a * s, b * s)); g.closePath(); }
+function ermine(cx, cy, rx, ry, s) {
+  g.beginPath(); g.ellipse(cx, cy, rx, ry, 0, 0, TAU); g.fillStyle = '#FFFFFF'; g.fill(); g.lineWidth = s * .05; g.strokeStyle = INK; g.stroke();
+  g.fillStyle = INK; for (let i = -2; i <= 2; i++) { g.beginPath(); g.ellipse(cx + i * rx * .38, cy + (i % 2 ? -.2 : .25) * ry, s * .04, s * .08, 0, 0, TAU); g.fill(); }
+}
+function drawHatBehind(h, s) {
+  g.lineWidth = s * .07; g.strokeStyle = INK; g.lineJoin = 'round';
+  if (h === 'lunaire') {
+    // night-blue hood around the head, ears poke through
+    g.beginPath(); g.ellipse(0, -.05 * s, 1.32 * s, 1.2 * s, 0, 0, TAU); g.fillStyle = '#2E3A8C'; g.fill(); g.stroke();
+    g.fillStyle = '#FFF1A8'; [[-1.05, -.55, .11], [1.1, -.35, .09], [-1.15, .3, .08], [1.12, .45, .1]].forEach(([a, b, r]) => { star(a * s, b * s, r * s); g.fill(); });
+  } else if (h === 'roi') {
+    // red royal cape behind the head
+    g.beginPath(); g.moveTo(-1.0 * s, .3 * s); g.quadraticCurveTo(-1.5 * s, 1.0 * s, -1.4 * s, 1.5 * s); g.lineTo(1.4 * s, 1.5 * s); g.quadraticCurveTo(1.5 * s, 1.0 * s, 1.0 * s, .3 * s); g.closePath();
+    g.fillStyle = '#C8323C'; g.fill(); g.stroke();
+  } else if (h === 'pyjama') {
+    g.beginPath(); g.moveTo(-.9 * s, .45 * s); g.quadraticCurveTo(-1.2 * s, 1.1 * s, -1.1 * s, 1.5 * s); g.lineTo(1.1 * s, 1.5 * s); g.quadraticCurveTo(1.2 * s, 1.1 * s, .9 * s, .45 * s); g.closePath();
+    g.fillStyle = '#BFE3FF'; g.fill();
+    g.save(); g.clip(); g.fillStyle = '#4FA3E0'; for (let x = -1.3; x < 1.3; x += .36) g.fillRect(x * s, 0, .16 * s, 2 * s); g.restore();
+    g.stroke();
+  }
+}
 function drawHat(h, s) {
   g.lineWidth = s * .06; g.strokeStyle = INK; g.lineJoin = 'round';
+  if (h === 'cacheoreilles') {
+    g.beginPath(); g.arc(0, -.25 * s, 1.0 * s, Math.PI * 1.03, Math.PI * 1.97); g.lineWidth = s * .14; g.strokeStyle = INK; g.stroke(); g.lineWidth = s * .09; g.strokeStyle = '#9A6FD8'; g.stroke();
+    g.lineWidth = s * .06; g.strokeStyle = INK;
+    for (const side of [-1, 1]) {
+      const cx = side * .98 * s, cy = -.3 * s;
+      g.fillStyle = '#FF8FB1'; for (let i = 0; i < 7; i++) { const a = i * TAU / 7; circle(cx + Math.cos(a) * .22 * s, cy + Math.sin(a) * .22 * s, .16 * s); g.fill(); }
+      circle(cx, cy, .26 * s); g.fill(); g.fillStyle = '#FFD1E0'; circle(cx - .06 * s, cy - .06 * s, .12 * s); g.fill();
+    }
+    return;
+  }
+  if (h === 'perles') {
+    for (let i = 0; i <= 10; i++) {
+      const a = Math.PI * (.12 + .76 * i / 10), x = Math.cos(a) * .8 * s, y = .5 * s + Math.sin(a) * .42 * s;
+      circle(x, y, .1 * s); g.fillStyle = '#FFF8F0'; g.fill(); g.lineWidth = s * .03; g.stroke();
+      circle(x - .03 * s, y - .03 * s, .03 * s); g.fillStyle = '#FFFFFF'; g.fill();
+    }
+    circle(0, .98 * s, .14 * s); g.fillStyle = '#FFD1E0'; g.fill(); g.stroke();
+    return;
+  }
+  if (h === 'ecailles') {
+    const dome = () => { g.beginPath(); g.moveTo(-.88 * s, -.5 * s); g.quadraticCurveTo(-.85 * s, -1.3 * s, 0, -1.3 * s); g.quadraticCurveTo(.85 * s, -1.3 * s, .88 * s, -.5 * s); g.closePath(); };
+    for (const [x, y] of [[-.45, -1.2], [0, -1.32], [.45, -1.2]]) { poly([[x - .14, y + .06], [x, y - .32], [x + .14, y + .06]], s); g.fillStyle = '#FFB020'; g.fill(); g.stroke(); }
+    dome(); g.fillStyle = '#5DBB52'; g.fill();
+    g.save(); dome(); g.clip(); g.strokeStyle = '#3F8A3D'; g.lineWidth = s * .05;
+    for (let r = 0; r < 4; r++) for (let k = -4; k <= 4; k++) { g.beginPath(); g.arc((k * .26 + (r % 2) * .13) * s, (-1.25 + r * .2) * s, .13 * s, 0, Math.PI); g.stroke(); }
+    g.restore(); dome(); g.lineWidth = s * .06; g.strokeStyle = INK; g.stroke();
+    g.fillStyle = '#3F8A3D'; g.fillRect(-.9 * s, -.6 * s, 1.8 * s, .16 * s); g.strokeRect(-.9 * s, -.6 * s, 1.8 * s, .16 * s);
+    return;
+  }
+  if (h === 'pyjama') {
+    const cap = () => { g.beginPath(); g.moveTo(-.8 * s, -.62 * s); g.quadraticCurveTo(-.6 * s, -1.4 * s, .3 * s, -1.35 * s); g.quadraticCurveTo(.9 * s, -1.3 * s, 1.25 * s, -.95 * s); g.quadraticCurveTo(.75 * s, -1.0 * s, .8 * s, -.62 * s); g.closePath(); };
+    cap(); g.fillStyle = '#BFE3FF'; g.fill();
+    g.save(); cap(); g.clip(); g.fillStyle = '#4FA3E0'; for (let x = -1; x < 1.4; x += .36) { g.save(); g.translate(x * s, -1 * s); g.rotate(.5); g.fillRect(-.08 * s, -s, .16 * s, 2 * s); g.restore(); } g.restore();
+    cap(); g.stroke();
+    g.fillStyle = '#FFFFFF'; g.fillRect(-.85 * s, -.72 * s, 1.7 * s, .2 * s); g.strokeRect(-.85 * s, -.72 * s, 1.7 * s, .2 * s);
+    circle(1.25 * s, -.95 * s, .17 * s); g.fillStyle = '#FFC93C'; g.fill(); g.stroke();
+    // striped collar under the chin
+    g.beginPath(); g.ellipse(0, .9 * s, .72 * s, .22 * s, 0, 0, TAU); g.fillStyle = '#FFFFFF'; g.fill(); g.stroke();
+    return;
+  }
+  if (h === 'roi') {
+    ermine(0, .92 * s, .85 * s, .24 * s, s);
+    g.beginPath(); g.ellipse(0, -.95 * s, .55 * s, .4 * s, 0, Math.PI, 0); g.fillStyle = '#C8323C'; g.fill(); g.stroke();
+    poly([[-.62, -.68], [-.7, -1.35], [-.36, -1.05], [0, -1.55], [.36, -1.05], [.7, -1.35], [.62, -.68]], s);
+    g.fillStyle = '#FFC93C'; g.fill(); g.stroke();
+    ermine(0, -.66 * s, .68 * s, .14 * s, s);
+    g.fillStyle = '#4FA3E0'; circle(0, -1.02 * s, .1 * s); g.fill(); g.fillStyle = '#6CC24A'; circle(-.4 * s, -.95 * s, .07 * s); g.fill(); circle(.4 * s, -.95 * s, .07 * s); g.fill();
+    circle(0, -1.6 * s, .08 * s); g.fillStyle = '#FFC93C'; g.fill(); g.stroke();
+    return;
+  }
+  if (h === 'lunaire') {
+    // crescent moon on top of the hood + collar
+    g.beginPath(); g.arc(0, -1.05 * s, .32 * s, 0, TAU); g.arc(.14 * s, -1.12 * s, .27 * s, 0, TAU, true); g.fillStyle = '#FFE066'; g.fill('evenodd');
+    g.beginPath(); g.ellipse(0, .92 * s, .8 * s, .2 * s, 0, 0, TAU); g.fillStyle = '#2E3A8C'; g.fill(); g.stroke();
+    g.fillStyle = '#FFF1A8'; star(-.35 * s, .92 * s, .09 * s); g.fill(); star(.35 * s, .92 * s, .09 * s); g.fill();
+    return;
+  }
   if (h === 'noeud') {
     g.fillStyle = '#FF6FA8';
     poly([[.55, -.78], [.15, -1.05], [.15, -.5]], s); g.fill(); g.stroke();
@@ -894,7 +979,7 @@ function resolve(b) {
     const hatsBefore = unlockedHats().length;
     save.counts[c.type.id] = (save.counts[c.type.id] || 0) + 1; persist();
     const newHats = unlockedHats();
-    if (newHats.length > hatsBefore) { const h = newHats[newHats.length - 1]; setTimeout(() => { showToast(`Nouveau chapeau : ${h.name} !`, true); sfx.fanfare(); }, 1600); }
+    if (newHats.length > hatsBefore) { const h = newHats[newHats.length - 1]; setTimeout(() => { showToast(`Cadeau gagné : ${h.name} !`, true); sfx.fanfare(); }, 1600); }
     const before = score; score += c.trait === 'kitten' ? 2 : 1; updateScore();
     for (let i = 0; i < 9; i++) parts.push({ kind: 'heart', x: b.tx + rnd(-1, 1) * best.s, y: b.ty, vx: rnd(-40, 40), vy: rnd(-160, -90), life: 1.2, r: best.s * rnd(.18, .3), col: ['#FF6FA8', '#FF8FB1', '#E8577A'][i % 3] });
     for (let i = 0; i < 12; i++) { const a = rnd(0, TAU), sp = rnd(120, 260); parts.push({ kind: 'star', x: b.tx, y: b.ty, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, life: .7, r: best.s * rnd(.12, .22), col: '#FFC93C' }); }
@@ -1065,22 +1150,22 @@ function openCollection() {
     const paint = () => {
       cg.clearRect(0, 0, px, px);
       // draw with the shared helpers onto this small canvas
-      swapCtx(cg, () => drawCat(px / 2, px * .64, px * .27, n ? c : { fur: '#D3D8E2', pattern: 'plain' }, { sil: !n, happy: !!n, hat: n ? save.hats[c.id] : null }));
+      swapCtx(cg, () => drawCat(px / 2, px * .56, px * .25, n ? c : { fur: '#D3D8E2', pattern: 'plain' }, { sil: !n, happy: !!n, hat: n ? save.hats[c.id] : null }));
       if (!n) { cg.font = `800 ${px * .3}px "Baloo 2", system-ui, sans-serif`; cg.textAlign = 'center'; cg.fillStyle = '#8F98A8'; cg.fillText('?', px / 2, px * .76); }
     };
     paint();
-    if (n) card.setAttribute('aria-label', `${c.name}, changer de chapeau`);
+    if (n) card.setAttribute('aria-label', `${c.name}, changer de tenue`);
     card.addEventListener('click', () => {
       const opts = [null, ...unlockedHats().map(h => h.id)];
-      if (opts.length < 2) { showToast(`Attrape ${HATS[0].at} chats pour gagner un chapeau !`); return; }
+      if (opts.length < 2) { showToast(`Attrape ${HATS[0].at} chats pour gagner un cadeau !`); return; }
       const cur = opts.indexOf(save.hats[c.id] || null);
       save.hats[c.id] = opts[(cur + 1) % opts.length]; persist(); paint(); sfx.pop();
     });
   });
   $('coll-progress').textContent = `${found} chats sur ${CATS.length} trouvés`;
   const t = totalCaught(), got = unlockedHats(), next = HATS.find(h => t < h.at);
-  $('coll-hats').textContent = (got.length ? `Chapeaux gagnés : ${got.length} sur ${HATS.length}. Touche un chat pour changer son chapeau !` : `Pas encore de chapeau.`)
-    + (next ? ` Prochain chapeau à ${next.at} chats (tu en as ${t}).` : ` Tu as tous les chapeaux !`);
+  $('coll-hats').textContent = (got.length ? `Chapeaux et costumes gagnés : ${got.length} sur ${HATS.length}. Touche un chat pour l'habiller !` : `Pas encore de chapeau ni de costume.`)
+    + (next ? ` Prochain cadeau à ${next.at} chats (tu en as ${t}).` : ` Tu as tout gagné !`);
 }
 function swapCtx(ctx, fn) { const keep = g; g = ctx; try { fn(); } finally { g = keep; } }
 function closeCollection() {
