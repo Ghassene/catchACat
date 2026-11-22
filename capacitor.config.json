@@ -1,0 +1,8 @@
+{
+  "appId": "io.github.ghassene.attrapeminou",
+  "appName": "Attrape-Minou",
+  "webDir": "www",
+  "android": {
+    "backgroundColor": "#8FD3F4"
+  }
+}
