@@ -74,6 +74,7 @@ button:focus-visible { outline: 4px solid var(--sun); outline-offset: 3px; }
 .lvl-big { background: var(--sun); }
 .link-btn { background: none; border: 0; font: 800 17px var(--body); color: var(--ink); text-decoration: underline; text-underline-offset: 4px; cursor: pointer; padding: 6px; justify-self: center; }
 
+.grid-title { grid-column: 1 / -1; margin: 6px 0 0; font-family: var(--display); font-size: 22px; line-height: 1; text-align: left; }
 .grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
 @media (max-width: 460px) { .grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 .hats-info { font-size: 16px; }
@@ -158,6 +159,25 @@ const CATS = [
   { id: 'soleil',    name: 'Soleil',    fur: '#FFD45A', dark: '#F28C28', light: '#FFF6D0', eye: '#E8577A', pattern: 'sun', rare: true },
   { id: 'arcenciel', name: 'Multicolore', fur: '#FF6B6B', dark: '#FF6B6B', light: '#FFFFFF', eye: '#4FA3E0', pattern: 'rainbow', rare: true },
 ];
+const ANIMALS = [
+  { id: 'chien',  name: 'Chien',  label: 'le chien',  species: 'dog',   fur: '#C68A4E', dark: '#7A4E26', light: '#F6E2C2', eye: '#2F2540' },
+  { id: 'cheval', name: 'Cheval', label: 'le cheval', species: 'horse', fur: '#A8673A', dark: '#4A2C1A', light: '#EBCFAE', eye: '#2F2540' },
+  { id: 'hibou',  name: 'Hibou',  label: 'le hibou',  species: 'owl',   fur: '#9C7A5A', dark: '#6B4E34', light: '#F3E3C8', eye: '#FFC93C' },
+  { id: 'renard', name: 'Renard', label: 'le renard', species: 'fox',   fur: '#F07A2A', dark: '#2F2540', light: '#FFF6EA', eye: '#2F2540' },
+];
+const RARE_STYLES = [
+  { id: 'etoile',    name: 'Étoile',      style: 'stars',   fur: '#CDB0F2', dark: '#9A6FD8', light: '#FFF1A8', eye: '#FF6FA8' },
+  { id: 'poisson',   name: 'Poisson',     style: 'fish',    fur: '#7CC8E8', dark: '#3B86C4', light: '#E6F7FF', eye: '#FF9F43' },
+  { id: 'soleil',    name: 'Soleil',      style: 'sun',     fur: '#FFD45A', dark: '#F28C28', light: '#FFF6D0', eye: '#E8577A' },
+  { id: 'arcenciel', name: 'Multicolore', style: 'rainbow', fur: '#FF6B6B', dark: '#9A6FD8', light: '#FFFFFF', eye: '#4FA3E0' },
+];
+// every animal also comes in the same four rare versions as the cats
+const RARE_ANIMALS = [];
+ANIMALS.forEach(a => RARE_STYLES.forEach(r => RARE_ANIMALS.push({
+  id: `${a.id}-${r.id}`, name: `${a.name} ${r.name}`, label: `${a.label} ${r.name}`, species: a.species, style: r.style, rare: true,
+  fur: r.fur, dark: r.dark, light: r.light, eye: a.species === 'owl' ? r.eye : '#2F2540',
+})));
+CATS.push(...ANIMALS, ...RARE_ANIMALS);
 const HATS = [
   { id: 'noeud', name: 'le nœud', at: 3 },
   { id: 'cacheoreilles', name: 'le cache-oreilles', at: 6 },
@@ -289,7 +309,121 @@ function heart(x, y, r) {
   g.bezierCurveTo(x + r * .6, y - r * 1.3, x + r * 1.6, y - r * .2, x, y + r * .9);
 }
 
+function drawEye(ex, ey, r, c, closed, happy) {
+  if (closed || happy) {
+    g.beginPath();
+    if (happy) { g.moveTo(ex - r, ey + r * .3); g.quadraticCurveTo(ex, ey - r * 1.1, ex + r, ey + r * .3); }
+    else { g.moveTo(ex - r, ey); g.quadraticCurveTo(ex, ey + r * .6, ex + r, ey); }
+    g.lineWidth = r * .35; g.strokeStyle = INK; g.stroke(); return;
+  }
+  circle(ex, ey, r); g.fillStyle = c; g.fill(); g.lineWidth = r * .18; g.strokeStyle = INK; g.stroke();
+  circle(ex, ey + r * .1, r * .55); g.fillStyle = '#1B1620'; g.fill();
+  circle(ex - r * .3, ey - r * .3, r * .28); g.fillStyle = '#fff'; g.fill();
+}
+function rareBehind(style, s) {
+  if (style === 'sun') {
+    g.strokeStyle = INK; g.lineWidth = s * .05;
+    for (let i = 0; i < 12; i++) {
+      const a = i * TAU / 12 + .13, w = .2;
+      g.beginPath(); g.moveTo(Math.cos(a - w) * 1.0 * s, Math.sin(a - w) * .9 * s); g.lineTo(Math.cos(a) * 1.5 * s, Math.sin(a) * 1.38 * s); g.lineTo(Math.cos(a + w) * 1.0 * s, Math.sin(a + w) * .9 * s); g.closePath();
+      g.fillStyle = i % 2 ? '#F28C28' : '#FFB020'; g.fill(); g.stroke();
+    }
+  } else if (style === 'fish') {
+    g.beginPath(); g.moveTo(-.35 * s, -.8 * s); g.quadraticCurveTo(-.25 * s, -1.5 * s, .1 * s, -1.55 * s); g.quadraticCurveTo(.2 * s, -1.1 * s, .38 * s, -.8 * s); g.closePath();
+    g.fillStyle = '#FF9F43'; g.fill(); g.lineWidth = s * .06; g.strokeStyle = INK; g.stroke();
+  }
+}
+function rareOverlay(style, s, light, path) {
+  g.save(); path(); g.clip();
+  if (style === 'stars') {
+    g.fillStyle = light; [[-.55, -.5, .16], [.5, -.6, .13], [0, -.72, .1], [.75, -.1, .1], [-.8, -.05, .09], [.2, -.3, .08]].forEach(([a, b, r]) => { star(a * s, b * s, r * s); g.fill(); });
+  } else if (style === 'fish') {
+    g.strokeStyle = light; g.lineWidth = s * .06;
+    for (let r = 0; r < 3; r++) for (let k = -3; k <= 3; k++) { g.beginPath(); g.arc((k * .32 + (r % 2) * .16) * s, (-.8 + r * .25) * s, .16 * s, 0, Math.PI); g.stroke(); }
+  } else if (style === 'rainbow') {
+    ['#FF6B6B', '#FFA94D', '#FFE066', '#7ED35A', '#4FA3E0', '#9A6FD8'].forEach((col, i) => { g.fillStyle = col; g.fillRect(-1.2 * s, (-1.0 + i * .34) * s, 2.4 * s, .35 * s); });
+  }
+  g.restore();
+}
+function drawAnimal(x, y, s, c, opts) {
+  const { blink = false, happy = false, sil = false, tilt = 0, hat = null } = opts;
+  const grey = '#D3D8E2';
+  const fur = sil ? grey : c.fur, dark = sil ? grey : c.dark, light = sil ? grey : c.light;
+  const line = sil ? 'rgba(47,37,64,.25)' : INK;
+  g.save(); g.translate(x, y); g.rotate(tilt);
+  g.lineJoin = 'round'; g.lineCap = 'round'; g.lineWidth = s * .07; g.strokeStyle = line;
+  if (!sil && hat) drawHatBehind(hat, s);
+  const shut = blink && !happy;
+  const rare = !sil && c.style;
+  if (rare) rareBehind(c.style, s);
+  if (c.species === 'dog') {
+    g.beginPath(); g.ellipse(0, 0, 1.0 * s, .9 * s, 0, 0, TAU); g.fillStyle = fur; g.fill(); g.stroke();
+    if (rare) rareOverlay(c.style, s, light, () => { g.beginPath(); g.ellipse(0, 0, 1.0 * s, .9 * s, 0, 0, TAU); });
+    else if (!sil) { g.save(); g.beginPath(); g.ellipse(0, 0, 1.0 * s, .9 * s, 0, 0, TAU); g.clip(); g.fillStyle = dark; circle(.42 * s, -.2 * s, .38 * s); g.fill(); g.restore(); }
+    for (const side of [-1, 1]) {
+      g.save(); g.translate(side * .82 * s, -.45 * s); g.rotate(side * .35);
+      g.beginPath(); g.ellipse(0, .45 * s, .32 * s, .62 * s, 0, 0, TAU); g.fillStyle = dark; g.fill(); g.strokeStyle = line; g.stroke(); g.restore();
+    }
+    if (!sil) {
+      g.beginPath(); g.ellipse(0, .38 * s, .52 * s, .38 * s, 0, 0, TAU); g.fillStyle = light; g.fill();
+      drawEye(-.4 * s, -.15 * s, .16 * s, '#3A2A20', shut, happy); drawEye(.42 * s, -.18 * s, .16 * s, '#3A2A20', shut, happy);
+      g.beginPath(); g.ellipse(0, .18 * s, .2 * s, .14 * s, 0, 0, TAU); g.fillStyle = INK; g.fill();
+      g.lineWidth = s * .05; g.strokeStyle = INK; g.beginPath(); g.moveTo(0, .3 * s); g.lineTo(0, .45 * s); g.quadraticCurveTo(-.2 * s, .58 * s, -.3 * s, .44 * s); g.moveTo(0, .45 * s); g.quadraticCurveTo(.2 * s, .58 * s, .3 * s, .44 * s); g.stroke();
+      if (happy) { g.beginPath(); g.ellipse(.05 * s, .62 * s, .11 * s, .15 * s, 0, 0, TAU); g.fillStyle = '#FF8FB1'; g.fill(); g.lineWidth = s * .04; g.stroke(); }
+    }
+  } else if (c.species === 'horse') {
+    for (const side of [-1, 1]) { poly([[side * .3, -.7], [side * .55, -1.4], [side * .7, -.65]], s); g.fillStyle = fur; g.fill(); g.stroke(); }
+    g.beginPath(); g.ellipse(0, .05 * s, .82 * s, 1.0 * s, 0, 0, TAU); g.fillStyle = fur; g.fill(); g.stroke();
+    if (rare) rareOverlay(c.style, s, light, () => { g.beginPath(); g.ellipse(0, .05 * s, .82 * s, 1.0 * s, 0, 0, TAU); });
+    if (!sil) {
+      g.save(); g.beginPath(); g.ellipse(0, .05 * s, .82 * s, 1.0 * s, 0, 0, TAU); g.clip();
+      g.fillStyle = '#FFFFFF'; g.beginPath(); g.moveTo(-.12 * s, -.75 * s); g.lineTo(.12 * s, -.75 * s); g.lineTo(.08 * s, .3 * s); g.lineTo(-.08 * s, .3 * s); g.closePath(); g.fill();
+      g.fillStyle = light; g.beginPath(); g.ellipse(0, .72 * s, .7 * s, .45 * s, 0, 0, TAU); g.fill();
+      g.restore();
+      g.fillStyle = INK; g.beginPath(); g.ellipse(-.25 * s, .7 * s, .07 * s, .11 * s, 0, 0, TAU); g.fill(); g.beginPath(); g.ellipse(.25 * s, .7 * s, .07 * s, .11 * s, 0, 0, TAU); g.fill();
+      g.lineWidth = s * .05; g.strokeStyle = INK; g.beginPath(); g.moveTo(-.2 * s, .9 * s); g.quadraticCurveTo(0, happy ? 1.02 * s : .95 * s, .2 * s, .9 * s); g.stroke();
+      drawEye(-.45 * s, -.2 * s, .15 * s, '#3A2A20', shut, happy); drawEye(.45 * s, -.2 * s, .15 * s, '#3A2A20', shut, happy);
+      // mane tuft
+      g.fillStyle = dark; for (const [a, b, r] of [[-.15, -.95, .2], [.08, -1.0, .22], [.28, -.88, .18]]) { circle(a * s, b * s, r * s); g.fill(); }
+    }
+  } else if (c.species === 'owl') {
+    for (const side of [-1, 1]) { poly([[side * .35, -.7], [side * .78, -1.35], [side * .85, -.5]], s); g.fillStyle = dark; g.fill(); g.stroke(); }
+    g.beginPath(); g.ellipse(0, 0, 1.05 * s, .95 * s, 0, 0, TAU); g.fillStyle = fur; g.fill(); g.stroke();
+    if (rare) rareOverlay(c.style, s, light, () => { g.beginPath(); g.ellipse(0, 0, 1.05 * s, .95 * s, 0, 0, TAU); });
+    if (!sil) {
+      g.save(); g.beginPath(); g.ellipse(0, 0, 1.05 * s, .95 * s, 0, 0, TAU); g.clip();
+      g.strokeStyle = light; g.lineWidth = s * .05;
+      for (let r = 0; r < 2; r++) for (let k = -2; k <= 2; k++) { g.beginPath(); g.arc((k * .3 + (r % 2) * .15) * s, (.55 + r * .2) * s, .12 * s, 0, Math.PI); g.stroke(); }
+      g.restore();
+      for (const side of [-1, 1]) { circle(side * .4 * s, -.12 * s, .42 * s); g.fillStyle = light; g.fill(); g.lineWidth = s * .05; g.strokeStyle = INK; g.stroke(); }
+      drawEye(-.4 * s, -.12 * s, .25 * s, c.eye, shut, happy); drawEye(.4 * s, -.12 * s, .25 * s, c.eye, shut, happy);
+      poly([[-.13, .18], [.13, .18], [0, .48]], s); g.fillStyle = '#FF9F43'; g.fill(); g.lineWidth = s * .05; g.strokeStyle = INK; g.stroke();
+    }
+  } else if (c.species === 'fox') {
+    for (const side of [-1, 1]) {
+      poly([[side * .25, -.6], [side * .8, -1.42], [side * 1.0, -.35]], s); g.fillStyle = fur; g.fill(); g.stroke();
+      if (!sil) { poly([[side * .65, -1.2], [side * .8, -1.42], [side * .9, -1.12]], s); g.fillStyle = dark; g.fill(); poly([[side * .45, -.62], [side * .78, -1.12], [side * .86, -.5]], s); g.fillStyle = light; g.fill(); }
+    }
+    const head = () => { g.beginPath(); g.moveTo(-1.08 * s, -.15 * s); g.quadraticCurveTo(-1.0 * s, -.92 * s, 0, -.9 * s); g.quadraticCurveTo(1.0 * s, -.92 * s, 1.08 * s, -.15 * s); g.quadraticCurveTo(.7 * s, .55 * s, 0, .78 * s); g.quadraticCurveTo(-.7 * s, .55 * s, -1.08 * s, -.15 * s); g.closePath(); };
+    head(); g.fillStyle = fur; g.fill();
+    if (rare) rareOverlay(c.style, s, c.style === 'rainbow' ? '#FFFFFF' : light, head);
+    if (!sil) {
+      g.save(); head(); g.clip(); g.fillStyle = light;
+      g.beginPath(); g.moveTo(-1.2 * s, .0); g.quadraticCurveTo(-.5 * s, -.05 * s, 0, .2 * s); g.quadraticCurveTo(.5 * s, -.05 * s, 1.2 * s, 0); g.lineTo(1.2 * s, 1 * s); g.lineTo(-1.2 * s, 1 * s); g.closePath(); g.fill();
+      g.restore();
+    }
+    head(); g.stroke();
+    if (!sil) {
+      drawEye(-.4 * s, -.25 * s, .14 * s, '#3A2A20', shut, happy); drawEye(.4 * s, -.25 * s, .14 * s, '#3A2A20', shut, happy);
+      g.beginPath(); g.ellipse(0, .5 * s, .14 * s, .1 * s, 0, 0, TAU); g.fillStyle = INK; g.fill();
+      g.lineWidth = s * .045; g.strokeStyle = INK; g.beginPath(); g.moveTo(0, .58 * s); g.quadraticCurveTo(-.12 * s, .7 * s, -.2 * s, .64 * s); g.moveTo(0, .58 * s); g.quadraticCurveTo(.12 * s, .7 * s, .2 * s, .64 * s); g.stroke();
+    }
+  }
+  if (!sil && hat) drawHat(hat, s);
+  g.restore();
+}
 function drawCat(x, y, s, c, opts = {}) {
+  if (c.species) return drawAnimal(x, y, s, c, opts);
   const { blink = false, happy = false, sil = false, tilt = 0, wink = false, shy = false, hat = null } = opts;
   g.save(); g.translate(x, y); g.rotate(tilt);
   g.lineJoin = 'round'; g.lineCap = 'round';
@@ -925,9 +1059,12 @@ const balls = [], parts = [];
 function rnd(a, b) { return a + Math.random() * (b - a); }
 function pickCat() {
   const total = Object.values(save.counts).reduce((a, b) => a + b, 0);
-  const rares = CATS.filter(c => c.rare);
-  if (total + score >= 4 && Math.random() < .1) return rares[Math.floor(Math.random() * rares.length)];
-  const pool = CATS.filter(c => !c.rare); return pool[Math.floor(Math.random() * pool.length)];
+  if (total + score >= 4 && Math.random() < .1) {
+    const rares = Math.random() < .3 ? RARE_ANIMALS : CATS.filter(c => c.rare && !c.species);
+    return rares[Math.floor(Math.random() * rares.length)];
+  }
+  if (Math.random() < .22) return ANIMALS[Math.floor(Math.random() * ANIMALS.length)];
+  const pool = CATS.filter(c => !c.rare && !c.species); return pool[Math.floor(Math.random() * pool.length)];
 }
 function headY(sp, pop, k = 1) { return sp.top + 2.0 * sp.s - pop * (2.0 + .6 * k) * sp.s; }
 function ease(x) { x = Math.max(0, Math.min(1, x)); return 1 - Math.pow(1 - x, 3); }
@@ -948,7 +1085,7 @@ function spawn() {
   const sp = free[Math.floor(Math.random() * free.length)];
   const type = pickCat();
   let trait = 'normal';
-  if (mode === 'play') { const r = Math.random(); trait = r < .12 ? 'kitten' : r < .27 ? 'clever' : r < .42 ? 'shy' : 'normal'; }
+  if (mode === 'play' && !type.species) { const r = Math.random(); trait = r < .12 ? 'kitten' : r < .27 ? 'clever' : r < .42 ? 'shy' : 'normal'; }
   sp.cat = { type, trait, k: trait === 'kitten' ? .7 : 1, maxPop: trait === 'shy' ? .8 : 1, hopped: false,
     age: 0, dur: (mode === 'play' ? level.dur : 3) * (type.rare ? .8 : 1) * rnd(.9, 1.15), state: 'up', blinkAt: rnd(.6, 1.6), ct: 0, popAtCatch: 0 };
   if (mode === 'play') sfx.pop();
@@ -984,10 +1121,10 @@ function resolve(b) {
     for (let i = 0; i < 9; i++) parts.push({ kind: 'heart', x: b.tx + rnd(-1, 1) * best.s, y: b.ty, vx: rnd(-40, 40), vy: rnd(-160, -90), life: 1.2, r: best.s * rnd(.18, .3), col: ['#FF6FA8', '#FF8FB1', '#E8577A'][i % 3] });
     for (let i = 0; i < 12; i++) { const a = rnd(0, TAU), sp = rnd(120, 260); parts.push({ kind: 'star', x: b.tx, y: b.ty, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, life: .7, r: best.s * rnd(.12, .22), col: '#FFC93C' }); }
     sfx.catch(c.type.id === 'nuage' ? 1.15 : c.type.id === 'reglisse' ? .85 : 1);
-    if (isNew) showToast(`Nouveau chat : ${c.type.name} !`, true);
+    if (isNew) showToast(c.type.species ? `Nouvel ami : ${c.type.label} !` : `Nouveau chat : ${c.type.name} !`, true);
     else if (c.trait === 'kitten') showToast(`Un chaton ! +2`, true);
     else if (c.trait === 'clever') showToast(`Bravo, ${c.type.name} le malin !`);
-    else showToast(c.type.rare ? `Waouh, ${c.type.name} !` : `Tu as attrapé ${c.type.name} !`);
+    else showToast(c.type.rare ? `Waouh, ${c.type.name} !` : `Tu as attrapé ${c.type.label || c.type.name} !`);
     if (Math.floor(score / SCENE_EVERY) > Math.floor(before / SCENE_EVERY)) sceneChangeIn = 1.4;
     else if (Math.floor(score / 10) > Math.floor(before / 10)) { const sc = score; setTimeout(() => showToast(`Bravo ! ${sc} chats !`, true), 1300); confetti(); sfx.fanfare(); }
   } else {
@@ -1137,9 +1274,14 @@ function openCollection() {
   collFrom = mode === 'play' ? 'play' : 'menu';
   mode = 'collection'; menu.hidden = true; coll.hidden = false;
   const grid = $('coll-grid'); grid.innerHTML = '';
-  let found = 0;
+  let found = 0, foundA = 0;
+  const nA = ANIMALS.length + RARE_ANIMALS.length, nC = CATS.length - nA;
+  const section = text => { const h = document.createElement('h3'); h.className = 'grid-title'; h.textContent = text; grid.append(h); };
+  section('Mes chats');
   CATS.forEach(c => {
-    const n = save.counts[c.id] || 0; if (n) found++;
+    if (c === ANIMALS[0]) section('Mes amis animaux');
+    if (c === RARE_ANIMALS[0]) section('Mes amis rares');
+    const n = save.counts[c.id] || 0; if (n) { if (c.species) foundA++; else found++; }
     const card = document.createElement('button'); card.type = 'button'; card.className = 'card' + (n ? '' : ' locked');
     if (!n) card.disabled = true;
     const cnv = document.createElement('canvas'); const px = 220; cnv.width = px; cnv.height = px;
@@ -1150,7 +1292,7 @@ function openCollection() {
     const paint = () => {
       cg.clearRect(0, 0, px, px);
       // draw with the shared helpers onto this small canvas
-      swapCtx(cg, () => drawCat(px / 2, px * .56, px * .25, n ? c : { fur: '#D3D8E2', pattern: 'plain' }, { sil: !n, happy: !!n, hat: n ? save.hats[c.id] : null }));
+      swapCtx(cg, () => drawCat(px / 2, px * .56, px * .25, n ? c : { fur: '#D3D8E2', pattern: 'plain', species: c.species }, { sil: !n, happy: !!n, hat: n ? save.hats[c.id] : null }));
       if (!n) { cg.font = `800 ${px * .3}px "Baloo 2", system-ui, sans-serif`; cg.textAlign = 'center'; cg.fillStyle = '#8F98A8'; cg.fillText('?', px / 2, px * .76); }
     };
     paint();
@@ -1162,7 +1304,7 @@ function openCollection() {
       save.hats[c.id] = opts[(cur + 1) % opts.length]; persist(); paint(); sfx.pop();
     });
   });
-  $('coll-progress').textContent = `${found} chats sur ${CATS.length} trouvés`;
+  $('coll-progress').textContent = `Chats trouvés : ${found} sur ${nC}. Amis trouvés : ${foundA} sur ${nA}.`;
   const t = totalCaught(), got = unlockedHats(), next = HATS.find(h => t < h.at);
   $('coll-hats').textContent = (got.length ? `Chapeaux et costumes gagnés : ${got.length} sur ${HATS.length}. Touche un chat pour l'habiller !` : `Pas encore de chapeau ni de costume.`)
     + (next ? ` Prochain cadeau à ${next.at} chats (tu en as ${t}).` : ` Tu as tout gagné !`);
