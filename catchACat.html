@@ -158,6 +158,12 @@ const CATS = [
   { id: 'poisson',   name: 'Poisson',   fur: '#7CC8E8', dark: '#3B86C4', light: '#E6F7FF', eye: '#FF9F43', pattern: 'fish', rare: true },
   { id: 'soleil',    name: 'Soleil',    fur: '#FFD45A', dark: '#F28C28', light: '#FFF6D0', eye: '#E8577A', pattern: 'sun', rare: true },
   { id: 'arcenciel', name: 'Multicolore', fur: '#FF6B6B', dark: '#FF6B6B', light: '#FFFFFF', eye: '#4FA3E0', pattern: 'rainbow', rare: true },
+  // mysterious: even rarer than the rare ones
+  { id: 'aigle',      name: 'Aigle',      fur: '#F7F1E6', dark: '#7A4E26', light: '#FFFFFF', eye: '#F5C531', pattern: 'eagle',   ear: '#7A4E26', nose: '#F5B031', rare: true, mystery: true },
+  { id: 'ange',       name: 'Ange',       fur: '#FFE4EE', dark: '#F6A5B8', light: '#FFFFFF', eye: '#6FB8F0', pattern: 'angel',   rare: true, mystery: true },
+  { id: 'glace',      name: 'Glace',      fur: '#BFE6FA', dark: '#5FA8D8', light: '#FFFFFF', eye: '#3A7BD5', pattern: 'ice',     ear: '#9AD6F5', whisk: '#FFFFFF', rare: true, mystery: true },
+  { id: 'saturne',    name: 'Saturne',    fur: '#F2C98A', dark: '#C98B4A', light: '#FFF2DA', eye: '#7A5AD8', pattern: 'saturn',  rare: true, mystery: true },
+  { id: 'mysterieux', name: 'Mystérieux', fur: '#4A3A6B', dark: '#2A1F42', light: '#C9B2FF', eye: '#7CF0D0', pattern: 'mystery', nose: '#C9B2FF', whisk: '#C9B2FF', rare: true, mystery: true },
 ];
 const ANIMALS = [
   { id: 'chien',  name: 'Chien',  label: 'le chien',  species: 'dog',   fur: '#C68A4E', dark: '#7A4E26', light: '#F6E2C2', eye: '#2F2540' },
@@ -444,10 +450,11 @@ function drawCat(x, y, s, c, opts = {}) {
     g.fillStyle = '#FF9F43'; g.fill(); g.lineWidth = s * .06; g.strokeStyle = INK; g.stroke();
     g.lineWidth = s * .04; for (const k of [-.15, .02, .2]) { g.beginPath(); g.moveTo(k * s, -.8 * s); g.lineTo((k + .05) * s, -1.35 * s); g.stroke(); }
   }
+  if (!sil) mysteryBehind(c, s);
   for (const side of [-1, 1]) {
     if (c.pattern === 'caracal' && !sil) { g.beginPath(); g.moveTo(side * .78 * s, -1.42 * tall * s); g.lineTo(side * .84 * s, -1.78 * s); g.lineWidth = s * .11; g.strokeStyle = c.dark; g.stroke(); }
     g.beginPath(); g.moveTo(side * .98 * s, -.3 * s); g.lineTo(side * .78 * s, -1.42 * tall * s); g.lineTo(side * .18 * s, -.82 * s); g.closePath();
-    g.fillStyle = sil ? c.fur : (c.pattern === 'calico' ? (side < 0 ? c.dark : c.light) : c.pattern === 'rainbow' ? (side < 0 ? '#4FA3E0' : '#FFC93C') : c.fur); g.fill();
+    g.fillStyle = sil ? c.fur : c.ear ? c.ear : (c.pattern === 'calico' ? (side < 0 ? c.dark : c.light) : c.pattern === 'rainbow' ? (side < 0 ? '#4FA3E0' : '#FFC93C') : c.fur); g.fill();
     g.lineWidth = s * .07; g.strokeStyle = line; g.stroke();
     if (!sil) { g.beginPath(); g.moveTo(side * .8 * s, -.5 * s); g.lineTo(side * .74 * s, -1.15 * s); g.lineTo(side * .4 * s, -.8 * s); g.closePath(); g.fillStyle = '#F6A5B8'; g.fill(); }
   }
@@ -475,7 +482,7 @@ function drawCat(x, y, s, c, opts = {}) {
     } else if (c.pattern === 'stars') {
       g.fillStyle = c.light;
       [[-.55, -.5, .16], [.5, -.6, .13], [.0, -.72, .1], [.75, -.1, .1], [-.8, -.05, .09]].forEach(([a, b, r]) => { star(a * s, b * s, r * s); g.fill(); });
-    }
+    } else if (c.mystery) mysteryOverlay(c, s);
     // muzzle
     g.fillStyle = c.light;
     const mr = c.pattern === 'muzzle' || c.pattern === 'tuxedo' ? .38 : .3;
@@ -527,8 +534,93 @@ function drawCat(x, y, s, c, opts = {}) {
   for (const side of [-1, 1]) for (const k of [-1, 0, 1]) {
     g.beginPath(); g.moveTo(side * .48 * s, .3 * s + k * .07 * s); g.lineTo(side * wl * s, .24 * s + k * .17 * s); g.stroke();
   }
+  mysteryFront(c, s);
   if (hat) drawHat(hat, s);
   g.restore();
+}
+/* ---------- mysterious cats: eagle, angel, ice, saturn, mystery ---------- */
+// While hidden, anything drawn here must stay within x ±1.35s and above y -1.85s.
+function saturnRing(s, front) {
+  g.save(); g.rotate(-.22);
+  g.beginPath(); g.ellipse(0, .45 * s, 1.3 * s, .28 * s, 0, front ? 0 : Math.PI, front ? Math.PI : TAU);
+  g.lineCap = 'round'; g.lineWidth = s * .24; g.strokeStyle = INK; g.stroke();
+  g.lineWidth = s * .15; g.strokeStyle = '#B79CF2'; g.stroke();
+  g.lineWidth = s * .05; g.strokeStyle = '#E9DEFF'; g.stroke();
+  g.restore();
+}
+function flake(x, y, r) {
+  g.lineWidth = r * .28; g.lineCap = 'round';
+  for (let i = 0; i < 3; i++) {
+    const a = i * Math.PI / 3, dx = Math.cos(a) * r, dy = Math.sin(a) * r;
+    g.beginPath(); g.moveTo(x - dx, y - dy); g.lineTo(x + dx, y + dy); g.stroke();
+  }
+}
+function mysteryBehind(c, s) {
+  g.lineJoin = 'round';
+  if (c.pattern === 'eagle') {
+    // two big feathered wings on the sides, plus a crest of feathers on top
+    for (const side of [-1, 1]) for (let k = 4; k >= 0; k--) {
+      g.save(); g.translate(side * (.98 + .03 * k) * s, (.05 - .26 * k) * s); g.rotate(side * (1.05 - .17 * k));
+      g.beginPath(); g.ellipse(0, -.2 * s, .15 * s, .36 * s, 0, 0, TAU);
+      g.fillStyle = k % 2 ? '#5C3A1C' : c.dark; g.fill(); g.lineWidth = s * .05; g.strokeStyle = INK; g.stroke();
+      g.restore();
+    }
+    for (const a of [-.25, 0, .25]) {
+      g.save(); g.translate(0, -.7 * s); g.rotate(a);
+      g.beginPath(); g.ellipse(0, -.42 * s, .12 * s, .4 * s, 0, 0, TAU);
+      g.fillStyle = c.dark; g.fill(); g.lineWidth = s * .05; g.strokeStyle = INK; g.stroke();
+      g.restore();
+    }
+  } else if (c.pattern === 'angel') {
+    for (const side of [-1, 1]) {
+      g.beginPath(); g.moveTo(side * .8 * s, -.05 * s);
+      g.quadraticCurveTo(side * 1.45 * s, -.15 * s, side * 1.3 * s, -1.05 * s);
+      g.quadraticCurveTo(side * 1.1 * s, -.62 * s, side * .75 * s, -.6 * s); g.closePath();
+      g.fillStyle = '#FFFFFF'; g.fill(); g.lineWidth = s * .06; g.strokeStyle = INK; g.stroke();
+      g.lineWidth = s * .04; g.strokeStyle = '#C9D6E8';
+      for (const k of [.35, .6]) { g.beginPath(); g.moveTo(side * (.95 + k * .2) * s, -(.15 + k * .5) * s); g.lineTo(side * (1.05 + k * .3) * s, -(.05 + k * .45) * s); g.stroke(); }
+    }
+  } else if (c.pattern === 'ice') {
+    for (const [x0, x1, top] of [[-.46, -.14, -1.3], [-.17, .17, -1.62], [.14, .46, -1.3]]) {
+      g.beginPath(); g.moveTo(x0 * s, -.65 * s); g.lineTo((x0 + x1) / 2 * s, top * s); g.lineTo(x1 * s, -.65 * s); g.closePath();
+      g.fillStyle = '#E6F7FF'; g.fill(); g.lineWidth = s * .05; g.strokeStyle = INK; g.stroke();
+      g.beginPath(); g.moveTo(((x0 + x1) / 2 - .04) * s, (top + .25) * s); g.lineTo(((x0 + x1) / 2 - .1) * s, -.75 * s); g.lineWidth = s * .05; g.strokeStyle = '#9AD6F5'; g.stroke();
+    }
+  } else if (c.pattern === 'saturn') {
+    saturnRing(s, false);
+  } else if (c.pattern === 'mystery') {
+    const gr = g.createRadialGradient(0, -.2 * s, .5 * s, 0, -.2 * s, 1.35 * s);
+    gr.addColorStop(0, 'rgba(183,156,242,.85)'); gr.addColorStop(1, 'rgba(183,156,242,0)');
+    g.fillStyle = gr; circle(0, -.2 * s, 1.35 * s); g.fill();
+  }
+}
+function mysteryOverlay(c, s) {
+  if (c.pattern === 'eagle') {
+    poly([[-1.2, -1.0], [1.2, -1.0], [1.2, -.3], [.85, -.5], [.6, -.3], [.3, -.52], [0, -.36], [-.3, -.52], [-.6, -.3], [-.85, -.5], [-1.2, -.3]], s);
+    g.fillStyle = c.dark; g.fill();
+  } else if (c.pattern === 'angel') {
+    g.fillStyle = '#FFFFFF'; heart(0, -.6 * s, .15 * s); g.fill();
+    [[-.6, -.5, .08], [.62, -.55, .07]].forEach(([a, b, r]) => { star(a * s, b * s, r * s); g.fill(); });
+  } else if (c.pattern === 'ice') {
+    g.strokeStyle = '#FFFFFF';
+    [[-.55, -.5, .15], [.55, -.55, .13], [.85, -.05, .1], [-.85, -.08, .09], [0, -.72, .1]].forEach(([a, b, r]) => flake(a * s, b * s, r * s));
+  } else if (c.pattern === 'saturn') {
+    g.fillStyle = c.dark; g.fillRect(-1.2 * s, -.78 * s, 2.4 * s, .14 * s); g.fillRect(-1.2 * s, -.48 * s, 2.4 * s, .1 * s);
+    g.fillStyle = c.light; g.fillRect(-1.2 * s, -.62 * s, 2.4 * s, .1 * s);
+  } else if (c.pattern === 'mystery') {
+    g.fillStyle = c.light; g.textAlign = 'center'; g.textBaseline = 'middle';
+    [[-.55, -.45, .5, -.2], [.58, -.5, .42, .2], [.02, -.78, .3, 0]].forEach(([a, b, r, rot]) => {
+      g.save(); g.translate(a * s, b * s); g.rotate(rot); g.font = `800 ${r * s}px "Baloo 2", system-ui, sans-serif`; g.fillText('?', 0, 0); g.restore();
+    });
+    star(.85 * s, -.1 * s, .09 * s); g.fill(); star(-.85 * s, -.05 * s, .08 * s); g.fill();
+  }
+}
+function mysteryFront(c, s) {
+  if (c.pattern === 'angel') {
+    g.beginPath(); g.ellipse(0, -1.58 * s, .58 * s, .15 * s, 0, 0, TAU);
+    g.lineWidth = s * .17; g.strokeStyle = INK; g.stroke();
+    g.lineWidth = s * .1; g.strokeStyle = '#FFD45A'; g.stroke();
+  } else if (c.pattern === 'saturn') saturnRing(s, true);
 }
 function poly(pts, s) { g.beginPath(); pts.forEach(([a, b], i) => i ? g.lineTo(a * s, b * s) : g.moveTo(a * s, b * s)); g.closePath(); }
 function ermine(cx, cy, rx, ry, s) {
@@ -1059,8 +1151,12 @@ const balls = [], parts = [];
 function rnd(a, b) { return a + Math.random() * (b - a); }
 function pickCat() {
   const total = Object.values(save.counts).reduce((a, b) => a + b, 0);
+  if (total + score >= 8 && Math.random() < .04) {
+    const myst = CATS.filter(c => c.mystery);
+    return myst[Math.floor(Math.random() * myst.length)];
+  }
   if (total + score >= 4 && Math.random() < .1) {
-    const rares = Math.random() < .3 ? RARE_ANIMALS : CATS.filter(c => c.rare && !c.species);
+    const rares = Math.random() < .3 ? RARE_ANIMALS : CATS.filter(c => c.rare && !c.species && !c.mystery);
     return rares[Math.floor(Math.random() * rares.length)];
   }
   if (Math.random() < .22) return ANIMALS[Math.floor(Math.random() * ANIMALS.length)];
@@ -1121,10 +1217,11 @@ function resolve(b) {
     for (let i = 0; i < 9; i++) parts.push({ kind: 'heart', x: b.tx + rnd(-1, 1) * best.s, y: b.ty, vx: rnd(-40, 40), vy: rnd(-160, -90), life: 1.2, r: best.s * rnd(.18, .3), col: ['#FF6FA8', '#FF8FB1', '#E8577A'][i % 3] });
     for (let i = 0; i < 12; i++) { const a = rnd(0, TAU), sp = rnd(120, 260); parts.push({ kind: 'star', x: b.tx, y: b.ty, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, life: .7, r: best.s * rnd(.12, .22), col: '#FFC93C' }); }
     sfx.catch(c.type.id === 'nuage' ? 1.15 : c.type.id === 'reglisse' ? .85 : 1);
-    if (isNew) showToast(c.type.species ? `Nouvel ami : ${c.type.label} !` : `Nouveau chat : ${c.type.name} !`, true);
+    if (isNew && c.type.mystery) { showToast(`Incroyable ! Un chat mystérieux : ${c.type.name} !`, true); confetti(); sfx.fanfare(); }
+    else if (isNew) showToast(c.type.species ? `Nouvel ami : ${c.type.label} !` : `Nouveau chat : ${c.type.name} !`, true);
     else if (c.trait === 'kitten') showToast(`Un chaton ! +2`, true);
     else if (c.trait === 'clever') showToast(`Bravo, ${c.type.name} le malin !`);
-    else showToast(c.type.rare ? `Waouh, ${c.type.name} !` : `Tu as attrapé ${c.type.label || c.type.name} !`);
+    else showToast(c.type.mystery ? `Incroyable, le chat ${c.type.name} !` : c.type.rare ? `Waouh, ${c.type.name} !` : `Tu as attrapé ${c.type.label || c.type.name} !`);
     if (Math.floor(score / SCENE_EVERY) > Math.floor(before / SCENE_EVERY)) sceneChangeIn = 1.4;
     else if (Math.floor(score / 10) > Math.floor(before / 10)) { const sc = score; setTimeout(() => showToast(`Bravo ! ${sc} chats !`, true), 1300); confetti(); sfx.fanfare(); }
   } else {
@@ -1195,8 +1292,9 @@ function render() {
       drawSpotFront(sp, clock);
       if (c.state === 'up' && pop > .85) drawPaws(sp.x, sp.top + .05 * sp.s, cs, c.type);
       if (c.type.rare && c.state === 'up' && pop > .5) {
-        g.fillStyle = '#FFF1A8';
-        for (let i = 0; i < 3; i++) { const a = clock * 2 + i * TAU / 3; star(sp.x + Math.cos(a) * sp.s * 1.6, hy - .3 * sp.s + Math.sin(a) * sp.s * .9, sp.s * .18); g.fill(); }
+        const ms = c.type.mystery, nst = ms ? 5 : 3;
+        g.fillStyle = ms ? '#D9C6FF' : '#FFF1A8';
+        for (let i = 0; i < nst; i++) { const a = clock * 2 + i * TAU / nst; star(sp.x + Math.cos(a) * sp.s * 1.6, hy - .3 * sp.s + Math.sin(a) * sp.s * .9, sp.s * .18); g.fill(); }
       }
     } else drawSpotFront(sp, clock);
   }
@@ -1279,6 +1377,7 @@ function openCollection() {
   const section = text => { const h = document.createElement('h3'); h.className = 'grid-title'; h.textContent = text; grid.append(h); };
   section('Mes chats');
   CATS.forEach(c => {
+    if (c.mystery && !CATS[CATS.indexOf(c) - 1].mystery) section('Mes chats mystérieux');
     if (c === ANIMALS[0]) section('Mes amis animaux');
     if (c === RARE_ANIMALS[0]) section('Mes amis rares');
     const n = save.counts[c.id] || 0; if (n) { if (c.species) foundA++; else found++; }
@@ -1286,7 +1385,7 @@ function openCollection() {
     if (!n) card.disabled = true;
     const cnv = document.createElement('canvas'); const px = 220; cnv.width = px; cnv.height = px;
     const name = document.createElement('b'); name.textContent = n ? c.name : '???';
-    const cnt = document.createElement('span'); cnt.textContent = n ? `attrapé ${n} fois` : (c.rare ? 'très rare' : 'pas encore');
+    const cnt = document.createElement('span'); cnt.textContent = n ? `attrapé ${n} fois` : (c.mystery ? 'mystérieux' : c.rare ? 'très rare' : 'pas encore');
     card.append(cnv, name, cnt); grid.append(card);
     const cg = cnv.getContext('2d');
     const paint = () => {
