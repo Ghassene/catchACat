@@ -85,6 +85,8 @@ button:focus-visible { outline: 4px solid var(--sun); outline-offset: 3px; }
 .card b { font-family: var(--display); font-size: 18px; line-height: 1; }
 .card span { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
 .card.locked b { color: var(--muted); }
+.card { position: relative; }
+.fx-btn { position: absolute; top: 4px; right: 4px; width: 34px; height: 34px; border-radius: 50%; border: 2px solid var(--ink); background: #FFF4C2; font-size: 17px; line-height: 1; padding: 0; cursor: pointer; }
 .progress { font-weight: 800; color: var(--muted); }
 @media (prefers-reduced-motion: reduce) { .score.bump b { animation: none; } #toast { transition: opacity .2s; } }
 </style>
@@ -198,6 +200,14 @@ const HATS = [
   { id: 'roi', name: 'le costume de roi', at: 65 },
   { id: 'lunaire', name: 'le costume lunaire', at: 80 },
 ];
+// magic effects to win, chosen per animal in the collection
+const EFFECTS = [
+  { id: 'fleurs', name: "l'effet fleurs", at: 5 },
+  { id: 'flamme', name: "l'effet flamme", at: 12 },
+  { id: 'backrooms', name: "l'effet backrooms", at: 20 },
+  { id: 'lunaire', name: "l'effet lunaire", at: 30 },
+  { id: 'aurore', name: "l'effet aurore boréale", at: 45 },
+];
 const LEVELS = {
   small: { dur: 3.8, maxCats: 2, gap: [0.6, 1.4], hit: 1.75 },
   big:   { dur: 2.3, maxCats: 3, gap: [0.35, 1.0], hit: 1.25 },
@@ -208,8 +218,10 @@ const KEY = 'attrape-minou-v1';
 let save = { counts: {}, hats: {}, music: true };
 try { const raw = localStorage.getItem(KEY); if (raw) { const p = JSON.parse(raw); if (p && p.counts) save = Object.assign(save, p); } } catch (e) {}
 if (!save.hats) save.hats = {};
+if (!save.fx) save.fx = {};
 function totalCaught() { return Object.values(save.counts).reduce((a, b) => a + b, 0); }
 function unlockedHats() { const t = totalCaught(); return HATS.filter(h => t >= h.at); }
+function unlockedFx() { const t = totalCaught(); return EFFECTS.filter(h => t >= h.at); }
 function persist() { try { localStorage.setItem(KEY, JSON.stringify(save)); } catch (e) {} }
 
 /* ---------- sound (synthesised, starts after a tap) ---------- */
@@ -361,6 +373,8 @@ function drawAnimal(x, y, s, c, opts) {
   const line = sil ? 'rgba(47,37,64,.25)' : INK;
   g.save(); g.translate(x, y); g.rotate(tilt);
   g.lineJoin = 'round'; g.lineCap = 'round'; g.lineWidth = s * .07; g.strokeStyle = line;
+  if (!sil && opts.fx) drawEffect(opts.fx, s);
+  g.lineJoin = 'round'; g.lineCap = 'round'; g.lineWidth = s * .07; g.strokeStyle = line;
   if (!sil && hat) drawHatBehind(hat, s);
   const shut = blink && !happy;
   const rare = !sil && c.style;
@@ -466,6 +480,7 @@ function drawCat(x, y, s, c, opts = {}) {
   const line = sil ? 'rgba(47,37,64,.25)' : INK;
   // ears
   const tall = c.pattern === 'caracal' ? 1.1 : 1;
+  if (!sil && opts.fx) { drawEffect(opts.fx, s); g.lineJoin = 'round'; g.lineCap = 'round'; }
   if (!sil && hat) drawHatBehind(hat, s);
   if (!sil && c.pattern === 'sun') {
     g.fillStyle = c.dark; g.strokeStyle = INK; g.lineWidth = s * .05;
@@ -663,6 +678,66 @@ function mysteryFront(c, s) {
     g.fillStyle = '#FFFEF2'; g.fillRect(-.5 * s, -1.68 * s, 1.0 * s, .2 * s);
     g.lineWidth = s * .05; g.strokeStyle = INK; g.strokeRect(-.5 * s, -1.68 * s, 1.0 * s, .2 * s);
   }
+}
+/* ---------- magic effects, drawn behind the head (within x ±1.35s, above y -1.85s) ---------- */
+function drawEffect(fx, s) {
+  const t = performance.now() / 1000;
+  g.save();
+  if (fx === 'fleurs') {
+    const cols = ['#FF8FB1', '#FFC93C', '#CDB0F2', '#7FD3F4', '#FF6B6B', '#FFFFFF'];
+    for (let i = 0; i < 9; i++) {
+      const a = i * TAU / 9 + t * .4, fx0 = Math.cos(a) * 1.2 * s, fy = -.15 * s + Math.sin(a) * 1.1 * s, r = .17 * s;
+      g.fillStyle = cols[i % cols.length];
+      for (let k = 0; k < 5; k++) { const b = k * TAU / 5 + t; circle(fx0 + Math.cos(b) * r, fy + Math.sin(b) * r, r * .75); g.fill(); }
+      g.fillStyle = '#FFE066'; circle(fx0, fy, r * .6); g.fill();
+    }
+    g.fillStyle = '#6CC24A';
+    for (const side of [-1, 1]) { g.beginPath(); g.ellipse(side * 1.0 * s, .55 * s, .14 * s, .3 * s, side * .8, 0, TAU); g.fill(); }
+  } else if (fx === 'flamme') {
+    for (const [col, k] of [['#FF6B3D', 1], ['#FFB020', .82], ['#FFE066', .62]]) {
+      g.fillStyle = col; g.beginPath();
+      const n = 11;
+      for (let i = 0; i <= n * 2; i++) {
+        const a = Math.PI * .05 + i / (n * 2) * Math.PI * .9 + Math.PI, tip = i % 2;
+        const fl = tip ? (1.25 + .22 * Math.sin(t * 9 + i * 1.7)) * k : .8 * k;
+        const x = Math.cos(a) * Math.min(1.35, fl * 1.2) * s, y = .15 * s + Math.sin(a) * fl * 1.3 * s;
+        i ? g.lineTo(x, Math.max(y, -1.82 * s)) : g.moveTo(x, y);
+      }
+      g.lineTo(1.1 * k * s, .5 * s); g.lineTo(-1.1 * k * s, .5 * s); g.closePath(); g.fill();
+    }
+    g.fillStyle = '#FFE066';
+    for (let i = 0; i < 4; i++) { const u = (t * .7 + i / 4) % 1; circle(Math.sin(i * 2.3 + t * 2) * .9 * s, (.2 - u * 1.9) * s, .06 * s * (1 - u)); g.fill(); }
+  } else if (fx === 'backrooms') {
+    const flick = Math.sin(t * 13) > .93 ? .35 : 1;
+    const gr = g.createRadialGradient(0, -.1 * s, .6 * s, 0, -.1 * s, 1.38 * s);
+    gr.addColorStop(0, `rgba(242,224,138,${.95 * flick})`); gr.addColorStop(1, 'rgba(242,224,138,0)');
+    g.fillStyle = gr; g.fillRect(-1.38 * s, -1.5 * s, 2.76 * s, 2.4 * s);
+    g.fillStyle = `rgba(160,135,60,${.85 * flick})`;
+    for (let i = 0; i < 6; i++) { const a = i * TAU / 6 - t * .5, x = Math.cos(a) * 1.18 * s, y = -.15 * s + Math.sin(a) * 1.05 * s; poly([[x / s, y / s - .2], [x / s + .13, y / s], [x / s, y / s + .2], [x / s - .13, y / s]], s); g.fill(); }
+    g.globalAlpha = flick; g.fillStyle = '#FFFEF2'; g.fillRect(-.55 * s, -1.75 * s, 1.1 * s, .16 * s);
+    g.lineWidth = s * .04; g.strokeStyle = 'rgba(47,37,64,.6)'; g.strokeRect(-.55 * s, -1.75 * s, 1.1 * s, .16 * s);
+  } else if (fx === 'lunaire') {
+    const gr = g.createRadialGradient(0, -.1 * s, .7 * s, 0, -.1 * s, 1.38 * s);
+    gr.addColorStop(0, 'rgba(160,180,255,.75)'); gr.addColorStop(1, 'rgba(60,70,160,0)');
+    g.fillStyle = gr; circle(0, -.1 * s, 1.38 * s); g.fill();
+    // crescent moon
+    g.fillStyle = '#FFF1B0'; circle(.95 * s, -1.2 * s, .36 * s); g.fill();
+    g.globalCompositeOperation = 'destination-out'; circle(1.1 * s, -1.3 * s, .3 * s); g.fill(); g.globalCompositeOperation = 'source-over';
+    g.fillStyle = '#FFFFFF';
+    [[-1.05, -1.0], [-.7, -1.5], [1.2, -.35], [-1.2, -.1], [.2, -1.62]].forEach(([a, b], i) => { g.globalAlpha = .4 + .6 * Math.abs(Math.sin(t * 2 + i)); star(a * s, b * s, .1 * s); g.fill(); });
+  } else if (fx === 'aurore') {
+    const cols = ['rgba(80,230,170,.75)', 'rgba(90,200,255,.65)', 'rgba(190,120,255,.6)'];
+    g.beginPath(); g.ellipse(0, -.2 * s, 1.36 * s, 1.5 * s, 0, 0, TAU); g.clip();
+    cols.forEach((col, k) => {
+      g.fillStyle = col; g.beginPath();
+      const y0 = (-1.55 + k * .38) * s;
+      g.moveTo(-1.4 * s, y0 + .5 * s);
+      for (let x = -1.4; x <= 1.41; x += .1) g.lineTo(x * s, y0 + Math.sin(x * 2.2 + t * 1.6 + k) * .18 * s);
+      for (let x = 1.4; x >= -1.41; x -= .1) g.lineTo(x * s, y0 + .45 * s + Math.sin(x * 2.2 + t * 1.6 + k + .6) * .18 * s);
+      g.closePath(); g.fill();
+    });
+  }
+  g.restore();
 }
 function poly(pts, s) { g.beginPath(); pts.forEach(([a, b], i) => i ? g.lineTo(a * s, b * s) : g.moveTo(a * s, b * s)); g.closePath(); }
 function ermine(cx, cy, rx, ry, s) {
@@ -1320,9 +1395,11 @@ function resolve(b) {
     b.state = 'held'; b.t = 0; b.spot = best;
     b.tx = best.x; b.ty = headY(best, c.popAtCatch, c.k);
     const isNew = !save.counts[c.type.id];
-    const hatsBefore = unlockedHats().length;
+    const hatsBefore = unlockedHats().length, fxBefore = unlockedFx().length;
     save.counts[c.type.id] = (save.counts[c.type.id] || 0) + 1; persist();
     const newHats = unlockedHats();
+    const newFx = unlockedFx();
+    if (newFx.length > fxBefore) { const h = newFx[newFx.length - 1]; setTimeout(() => { showToast(`Effet magique gagné : ${h.name} !`, true); sfx.fanfare(); }, 2600); }
     if (newHats.length > hatsBefore) { const h = newHats[newHats.length - 1]; setTimeout(() => { showToast(`Cadeau gagné : ${h.name} !`, true); sfx.fanfare(); }, 1600); }
     const before = score; score += c.trait === 'kitten' ? 2 : 1; updateScore();
     for (let i = 0; i < 9; i++) parts.push({ kind: 'heart', x: b.tx + rnd(-1, 1) * best.s, y: b.ty, vx: rnd(-40, 40), vy: rnd(-160, -90), life: 1.2, r: best.s * rnd(.18, .3), col: ['#FF6FA8', '#FF8FB1', '#E8577A'][i % 3] });
@@ -1394,10 +1471,10 @@ function render() {
       g.save(); g.beginPath(); g.rect(sp.x - 3 * sp.s, sp.top - 4 * sp.s, 6 * sp.s, 4 * sp.s + 2.2 * sp.s); g.clip();
       if (c.state === 'caught') {
         const k = 1 - ease(c.ct / .55);
-        if (k > .02) drawCat(sp.x, hy, cs * k, c.type, { happy: true, tilt: c.ct * 6, hat: save.hats[c.type.id] });
+        if (k > .02) drawCat(sp.x, hy, cs * k, c.type, { happy: true, tilt: c.ct * 6, hat: save.hats[c.type.id], fx: save.fx[c.type.id] });
       } else {
         const blink = (c.age % 2.4) > c.blinkAt && (c.age % 2.4) < c.blinkAt + .14;
-        drawCat(sp.x, hy + Math.sin(c.age * 5) * sp.s * .04, cs, c.type, { blink, wink: c.trait === 'clever', shy: c.trait === 'shy', hat: save.hats[c.type.id], tilt: Math.sin(c.age * 2.2) * .08 });
+        drawCat(sp.x, hy + Math.sin(c.age * 5) * sp.s * .04, cs, c.type, { blink, wink: c.trait === 'clever', shy: c.trait === 'shy', hat: save.hats[c.type.id], fx: save.fx[c.type.id], tilt: Math.sin(c.age * 2.2) * .08 });
       }
       g.restore();
       drawSpotFront(sp, clock);
@@ -1492,22 +1569,36 @@ function openCollection() {
     if (c === ANIMALS[0]) section('Mes amis animaux');
     if (c === RARE_ANIMALS[0]) section('Mes amis rares');
     const n = save.counts[c.id] || 0; if (n) { if (c.species) foundA++; else found++; }
-    const card = document.createElement('button'); card.type = 'button'; card.className = 'card' + (n ? '' : ' locked');
-    if (!n) card.disabled = true;
+    const card = document.createElement('div'); card.className = 'card' + (n ? '' : ' locked');
+    if (n) { card.setAttribute('role', 'button'); card.tabIndex = 0; }
     const cnv = document.createElement('canvas'); const px = 220; cnv.width = px; cnv.height = px;
     const name = document.createElement('b'); name.textContent = n ? c.name : '???';
     const cnt = document.createElement('span'); cnt.textContent = n ? `attrapé ${n} fois` : (c.mystery ? 'mystérieux' : c.rare ? 'très rare' : 'pas encore');
     card.append(cnv, name, cnt); grid.append(card);
+    let fxBtn = null;
+    if (n) {
+      fxBtn = document.createElement('button'); fxBtn.type = 'button'; fxBtn.className = 'fx-btn'; fxBtn.textContent = '✨';
+      fxBtn.setAttribute('aria-label', `${c.name}, changer d'effet magique`); card.append(fxBtn);
+    }
     const cg = cnv.getContext('2d');
     const paint = () => {
       cg.clearRect(0, 0, px, px);
       // draw with the shared helpers onto this small canvas
-      swapCtx(cg, () => drawCat(px / 2, px * .56, px * .25, n ? c : { fur: '#D3D8E2', pattern: 'plain', species: c.species }, { sil: !n, happy: !!n, hat: n ? save.hats[c.id] : null }));
+      swapCtx(cg, () => drawCat(px / 2, px * .56, px * .25, n ? c : { fur: '#D3D8E2', pattern: 'plain', species: c.species }, { sil: !n, happy: !!n, hat: n ? save.hats[c.id] : null, fx: n ? save.fx[c.id] : null }));
       if (!n) { cg.font = `800 ${px * .3}px "Baloo 2", system-ui, sans-serif`; cg.textAlign = 'center'; cg.fillStyle = '#8F98A8'; cg.fillText('?', px / 2, px * .76); }
     };
     paint();
     if (n) card.setAttribute('aria-label', `${c.name}, changer de tenue`);
+    if (fxBtn) fxBtn.addEventListener('click', e => {
+      e.stopPropagation();
+      const opts = [null, ...unlockedFx().map(h => h.id)];
+      if (opts.length < 2) { showToast(`Attrape ${EFFECTS[0].at} chats pour gagner un effet magique !`); return; }
+      const cur = opts.indexOf(save.fx[c.id] || null);
+      save.fx[c.id] = opts[(cur + 1) % opts.length]; persist(); paint(); sfx.pop();
+    });
+    if (n) card.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); card.click(); } });
     card.addEventListener('click', () => {
+      if (!n) return;
       const opts = [null, ...unlockedHats().map(h => h.id)];
       if (opts.length < 2) { showToast(`Attrape ${HATS[0].at} chats pour gagner un cadeau !`); return; }
       const cur = opts.indexOf(save.hats[c.id] || null);
@@ -1518,6 +1609,9 @@ function openCollection() {
   const t = totalCaught(), got = unlockedHats(), next = HATS.find(h => t < h.at);
   $('coll-hats').textContent = (got.length ? `Chapeaux et costumes gagnés : ${got.length} sur ${HATS.length}. Touche un chat pour l'habiller !` : `Pas encore de chapeau ni de costume.`)
     + (next ? ` Prochain cadeau à ${next.at} chats (tu en as ${t}).` : ` Tu as tout gagné !`);
+  const gotFx = unlockedFx(), nextFx = EFFECTS.find(h => t < h.at);
+  $('coll-hats').textContent += (gotFx.length ? ` Effets magiques : ${gotFx.length} sur ${EFFECTS.length}, touche ✨ pour en mettre un.` : '')
+    + (nextFx ? ` Prochain effet à ${nextFx.at} chats.` : '');
 }
 function swapCtx(ctx, fn) { const keep = g; g = ctx; try { fn(); } finally { g = keep; } }
 function closeCollection() {
