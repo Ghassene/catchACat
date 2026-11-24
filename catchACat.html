@@ -160,6 +160,7 @@ const CATS = [
   { id: 'etoile',    name: 'Étoile',    fur: '#CDB0F2', dark: '#9A6FD8', light: '#FFF1A8', eye: '#FF6FA8', pattern: 'stars', rare: true },
   { id: 'poisson',   name: 'Poisson',   fur: '#7CC8E8', dark: '#3B86C4', light: '#E6F7FF', eye: '#FF9F43', pattern: 'fish', rare: true },
   { id: 'soleil',    name: 'Soleil',    fur: '#FFD45A', dark: '#F28C28', light: '#FFF6D0', eye: '#E8577A', pattern: 'sun', rare: true },
+  { id: 'alien',     name: 'Extraterrestre', fur: '#9BE37E', dark: '#4FAE5A', light: '#E6FFD8', eye: '#B05CE8', pattern: 'alien', nose: '#B05CE8', rare: true },
   { id: 'arcenciel', name: 'Multicolore', fur: '#FF6B6B', dark: '#FF6B6B', light: '#FFFFFF', eye: '#4FA3E0', pattern: 'rainbow', rare: true },
   // mysterious: even rarer than the rare ones
   { id: 'aigle',      name: 'Aigle',      fur: '#F7F1E6', dark: '#7A4E26', light: '#FFFFFF', eye: '#F5C531', pattern: 'eagle',   ear: '#7A4E26', nose: '#F5B031', rare: true, mystery: true },
@@ -527,7 +528,7 @@ function drawCat(x, y, s, c, opts = {}) {
     } else if (c.pattern === 'stars') {
       g.fillStyle = c.light;
       [[-.55, -.5, .16], [.5, -.6, .13], [.0, -.72, .1], [.75, -.1, .1], [-.8, -.05, .09]].forEach(([a, b, r]) => { star(a * s, b * s, r * s); g.fill(); });
-    } else if (c.mystery || c.pattern === 'backroom') mysteryOverlay(c, s);
+    } else if (c.mystery || c.pattern === 'backroom' || c.pattern === 'alien') mysteryOverlay(c, s);
     // muzzle
     g.fillStyle = c.light;
     const mr = c.pattern === 'muzzle' || c.pattern === 'tuxedo' ? .38 : .3;
@@ -633,6 +634,15 @@ function mysteryBehind(c, s) {
     }
   } else if (c.pattern === 'saturn') {
     saturnRing(s, false);
+  } else if (c.pattern === 'alien') {
+    // two bendy antennae with glowing tips
+    const glow = .6 + .4 * Math.sin(performance.now() / 250);
+    for (const side of [-1, 1]) {
+      g.beginPath(); g.moveTo(side * .28 * s, -.8 * s); g.quadraticCurveTo(side * .2 * s, -1.35 * s, side * .55 * s, -1.6 * s);
+      g.lineWidth = s * .09; g.strokeStyle = INK; g.stroke(); g.lineWidth = s * .05; g.strokeStyle = c.dark; g.stroke();
+      g.fillStyle = `rgba(255,143,177,${.45 * glow})`; circle(side * .55 * s, -1.62 * s, .22 * s); g.fill();
+      g.fillStyle = '#FF8FB1'; circle(side * .55 * s, -1.62 * s, .12 * s); g.fill(); g.lineWidth = s * .04; g.strokeStyle = INK; g.stroke();
+    }
   } else if (c.pattern === 'mystery') {
     const gr = g.createRadialGradient(0, -.2 * s, .5 * s, 0, -.2 * s, 1.35 * s);
     gr.addColorStop(0, 'rgba(183,156,242,.85)'); gr.addColorStop(1, 'rgba(183,156,242,0)');
@@ -652,6 +662,9 @@ function mysteryOverlay(c, s) {
   } else if (c.pattern === 'saturn') {
     g.fillStyle = c.dark; g.fillRect(-1.2 * s, -.78 * s, 2.4 * s, .14 * s); g.fillRect(-1.2 * s, -.48 * s, 2.4 * s, .1 * s);
     g.fillStyle = c.light; g.fillRect(-1.2 * s, -.62 * s, 2.4 * s, .1 * s);
+  } else if (c.pattern === 'alien') {
+    g.fillStyle = c.dark;
+    [[-.7, -.45, .16], [.75, -.3, .12], [-.35, -.75, .09], [.45, -.72, .1], [-.85, .1, .08]].forEach(([a, b, r]) => { circle(a * s, b * s, r * s); g.fill(); });
   } else if (c.pattern === 'backroom') {
     // wallpaper stripes and diamonds, like the walls of the backrooms
     g.fillStyle = 'rgba(184,160,85,.45)';
@@ -672,6 +685,13 @@ function mysteryFront(c, s) {
     g.lineWidth = s * .17; g.strokeStyle = INK; g.stroke();
     g.lineWidth = s * .1; g.strokeStyle = '#FFD45A'; g.stroke();
   } else if (c.pattern === 'saturn') saturnRing(s, true);
+  else if (c.pattern === 'alien') {
+    // the third eye in the middle of the forehead
+    g.beginPath(); g.ellipse(0, -.55 * s, .17 * s, .2 * s, 0, 0, TAU); g.fillStyle = '#fff'; g.fill(); g.lineWidth = s * .045; g.strokeStyle = INK; g.stroke();
+    g.beginPath(); g.ellipse(0, -.54 * s, .12 * s, .15 * s, 0, 0, TAU); g.fillStyle = c.eye; g.fill();
+    g.beginPath(); g.ellipse(0, -.54 * s, .055 * s, .12 * s, 0, 0, TAU); g.fillStyle = '#1B1620'; g.fill();
+    circle(-.05 * s, -.61 * s, .045 * s); g.fillStyle = '#fff'; g.fill();
+  }
   else if (c.pattern === 'backroom') {
     // its own little ceiling light, floating and humming above its head
     g.fillStyle = 'rgba(255,253,215,.55)'; g.beginPath(); g.ellipse(0, -1.5 * s, .75 * s, .3 * s, 0, 0, TAU); g.fill();
