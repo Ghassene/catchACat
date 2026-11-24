@@ -154,6 +154,7 @@ const CATS = [
   { id: 'moustache', name: 'Moustache', fur: '#757A86', dark: '#4C505A', light: '#FFFFFF', eye: '#7CC0E8', pattern: 'muzzle', whisk: '#FFFFFF' },
   { id: 'caracal',   name: 'Caracal',   fur: '#D9A86C', dark: '#2E2A33', light: '#FFF6E8', eye: '#E0A030', pattern: 'caracal' },
   { id: 'tuxedo',    name: 'Tuxedo',    fur: '#2B2730', dark: '#1A171E', light: '#FFFFFF', eye: '#7CD36A', pattern: 'tuxedo', whisk: '#FFFFFF' },
+  { id: 'backroom',  name: 'Backroom',  fur: '#E9D68C', dark: '#B8A055', light: '#FFF8D8', eye: '#5DBB52', pattern: 'backroom', home: 'backrooms' },
   { id: 'etoile',    name: 'Étoile',    fur: '#CDB0F2', dark: '#9A6FD8', light: '#FFF1A8', eye: '#FF6FA8', pattern: 'stars', rare: true },
   { id: 'poisson',   name: 'Poisson',   fur: '#7CC8E8', dark: '#3B86C4', light: '#E6F7FF', eye: '#FF9F43', pattern: 'fish', rare: true },
   { id: 'soleil',    name: 'Soleil',    fur: '#FFD45A', dark: '#F28C28', light: '#FFF6D0', eye: '#E8577A', pattern: 'sun', rare: true },
@@ -511,7 +512,7 @@ function drawCat(x, y, s, c, opts = {}) {
     } else if (c.pattern === 'stars') {
       g.fillStyle = c.light;
       [[-.55, -.5, .16], [.5, -.6, .13], [.0, -.72, .1], [.75, -.1, .1], [-.8, -.05, .09]].forEach(([a, b, r]) => { star(a * s, b * s, r * s); g.fill(); });
-    } else if (c.mystery) mysteryOverlay(c, s);
+    } else if (c.mystery || c.pattern === 'backroom') mysteryOverlay(c, s);
     // muzzle
     g.fillStyle = c.light;
     const mr = c.pattern === 'muzzle' || c.pattern === 'tuxedo' ? .38 : .3;
@@ -636,6 +637,12 @@ function mysteryOverlay(c, s) {
   } else if (c.pattern === 'saturn') {
     g.fillStyle = c.dark; g.fillRect(-1.2 * s, -.78 * s, 2.4 * s, .14 * s); g.fillRect(-1.2 * s, -.48 * s, 2.4 * s, .1 * s);
     g.fillStyle = c.light; g.fillRect(-1.2 * s, -.62 * s, 2.4 * s, .1 * s);
+  } else if (c.pattern === 'backroom') {
+    // wallpaper stripes and diamonds, like the walls of the backrooms
+    g.fillStyle = 'rgba(184,160,85,.45)';
+    for (let k = -1.05; k < 1.2; k += .42) g.fillRect((k - .07) * s, -1 * s, .14 * s, 2 * s);
+    g.fillStyle = c.light;
+    [[-.21, -.62], [.21, -.42], [-.63, -.42], [.63, -.62], [0, -.8]].forEach(([a, b]) => { poly([[a, b - .1], [a + .07, b], [a, b + .1], [a - .07, b]], s); g.fill(); });
   } else if (c.pattern === 'mystery') {
     g.fillStyle = c.light; g.textAlign = 'center'; g.textBaseline = 'middle';
     [[-.55, -.45, .5, -.2], [.58, -.5, .42, .2], [.02, -.78, .3, 0]].forEach(([a, b, r, rot]) => {
@@ -650,6 +657,12 @@ function mysteryFront(c, s) {
     g.lineWidth = s * .17; g.strokeStyle = INK; g.stroke();
     g.lineWidth = s * .1; g.strokeStyle = '#FFD45A'; g.stroke();
   } else if (c.pattern === 'saturn') saturnRing(s, true);
+  else if (c.pattern === 'backroom') {
+    // its own little ceiling light, floating and humming above its head
+    g.fillStyle = 'rgba(255,253,215,.55)'; g.beginPath(); g.ellipse(0, -1.5 * s, .75 * s, .3 * s, 0, 0, TAU); g.fill();
+    g.fillStyle = '#FFFEF2'; g.fillRect(-.5 * s, -1.68 * s, 1.0 * s, .2 * s);
+    g.lineWidth = s * .05; g.strokeStyle = INK; g.strokeRect(-.5 * s, -1.68 * s, 1.0 * s, .2 * s);
+  }
 }
 function poly(pts, s) { g.beginPath(); pts.forEach(([a, b], i) => i ? g.lineTo(a * s, b * s) : g.moveTo(a * s, b * s)); g.closePath(); }
 function ermine(cx, cy, rx, ry, s) {
@@ -1255,7 +1268,10 @@ function pickCat() {
   // hamsters love the backrooms
   if (SCENES[sceneIdx].id === 'backrooms' && Math.random() < .35) return ANIMALS.find(a => a.species === 'hamster');
   if (Math.random() < .22) return ANIMALS[Math.floor(Math.random() * ANIMALS.length)];
-  const pool = CATS.filter(c => !c.rare && !c.species); return pool[Math.floor(Math.random() * pool.length)];
+  // a cat with a home (like the backroom cat) only shows up in its own place, and often there
+  const here = SCENES[sceneIdx].id, homeCats = CATS.filter(c => c.home === here);
+  if (homeCats.length && Math.random() < .3) return homeCats[Math.floor(Math.random() * homeCats.length)];
+  const pool = CATS.filter(c => !c.rare && !c.species && !c.home); return pool[Math.floor(Math.random() * pool.length)];
 }
 function headY(sp, pop, k = 1) { return sp.top + 2.0 * sp.s - pop * (2.0 + .6 * k) * sp.s; }
 function ease(x) { x = Math.max(0, Math.min(1, x)); return 1 - Math.pow(1 - x, 3); }
