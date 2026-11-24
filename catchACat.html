@@ -259,15 +259,39 @@ function meow(delay = 0, pitch = 1) {
 const TUNE = [[72, 1], [76, 1], [79, 2], [76, 1], [72, 1], [74, 2], [71, 1], [74, 1], [77, 2], [74, 1], [71, 1], [72, 2],
   [76, 1], [79, 1], [81, 2], [79, 1], [76, 1], [77, 2], [74, 1], [71, 1], [72, 1], [74, 1], [72, 2], [0, 2]];
 const BASS = [48, 43, 45, 43];
+// one little original tune per scene: notes [midi, beats], bass roots, tempo, voice
+const SONGS = {
+  garden: { tune: TUNE, bass: BASS, beat: .32, wave: 'triangle', vol: .045 },
+  house: { beat: .34, wave: 'triangle', vol: .045, bass: [48, 41, 43, 48],
+    tune: [[67, 1], [72, 1], [76, 1], [74, 2], [72, 1], [69, 1], [71, 1], [72, 2], [0, 1], [67, 1], [65, 1], [64, 1], [65, 1], [67, 2], [0, 1],
+      [72, 1], [74, 1], [76, 1], [77, 2], [76, 1], [74, 1], [72, 1], [71, 1], [72, 3], [0, 1]] },
+  bedroom: { beat: .42, wave: 'sine', vol: .06, bass: [48, 45, 41, 43],
+    tune: [[76, 2], [74, 1], [72, 2], [74, 1], [76, 2], [79, 1], [76, 3], [74, 2], [72, 1], [71, 2], [72, 1], [74, 3], [0, 3]] },
+  forest: { beat: .34, wave: 'triangle', vol: .05, bass: [45, 43, 41, 43],
+    tune: [[69, 1], [72, 1], [74, 1], [76, 2], [74, 1], [72, 1], [69, 2], [67, 1], [69, 1], [72, 2], [74, 2], [0, 1],
+      [76, 1], [79, 1], [76, 1], [74, 2], [72, 1], [74, 1], [69, 4], [0, 2]] },
+  factory: { beat: .26, wave: 'square', vol: .025, bass: [36, 43, 38, 43],
+    tune: [[60, 1], [64, 1], [67, 1], [72, 1], [67, 1], [64, 1], [60, 2], [62, 1], [65, 1], [69, 1], [74, 1], [69, 1], [65, 1], [62, 2],
+      [64, 1], [67, 1], [71, 1], [76, 1], [74, 1], [71, 1], [67, 1], [72, 3], [0, 2]] },
+  roof: { beat: .38, wave: 'triangle', vol: .045, bass: [43, 47, 40, 45],
+    tune: [[71, 1], [74, 1], [78, 2], [76, 1], [74, 1], [71, 2], [69, 1], [71, 1], [74, 3], [0, 1], [79, 1], [78, 1], [76, 2], [74, 1], [71, 1], [69, 1], [67, 3], [0, 2]] },
+  clouds: { beat: .4, wave: 'sine', vol: .06, bass: [48, 53, 48, 55],
+    tune: [[84, 1], [83, 1], [79, 2], [76, 2], [79, 1], [81, 1], [79, 2], [0, 2], [76, 1], [77, 1], [79, 2], [84, 2], [83, 1], [81, 1], [79, 4], [0, 2]] },
+  backrooms: { beat: .45, wave: 'sawtooth', vol: .018, bass: [40, 40, 39, 40],
+    tune: [[64, 2], [0, 2], [63, 2], [0, 2], [64, 1], [67, 1], [66, 4], [0, 4]] },
+  manor: { beat: .3, wave: 'triangle', vol: .05, bass: [45, 40, 45, 40],
+    tune: [[69, 1], [72, 1], [76, 1], [75, 1], [74, 2], [71, 1], [68, 1], [69, 2], [64, 2], [69, 1], [72, 1], [77, 2], [76, 1], [75, 1], [76, 4], [0, 2]] },
+};
+function song() { return SONGS[SCENES[sceneIdx].id] || SONGS.garden; }
 let musicTimer = 0, nextNote = 0, noteIdx = 0, beatCount = 0;
 function midi(n) { return 440 * Math.pow(2, (n - 69) / 12); }
 function musicTick() {
   const a = audio(); if (!a) return;
-  const beat = .32;
+  const sg = song(), beat = sg.beat;
   while (nextNote < a.currentTime + .4) {
-    const [n, d] = TUNE[noteIdx % TUNE.length], delay = Math.max(0, nextNote - a.currentTime);
-    if (n) tone(midi(n), d * beat * .95, 'triangle', .045, null, delay);
-    for (let i = 0; i < d; i++) { if ((beatCount + i) % 4 === 0) tone(midi(BASS[Math.floor((beatCount + i) / 4) % BASS.length]), beat * 3.6, 'sine', .06, null, delay + i * beat); }
+    const [n, d] = sg.tune[noteIdx % sg.tune.length], delay = Math.max(0, nextNote - a.currentTime);
+    if (n) tone(midi(n), d * beat * .95, sg.wave, sg.vol, null, delay);
+    for (let i = 0; i < d; i++) { if ((beatCount + i) % 4 === 0) tone(midi(sg.bass[Math.floor((beatCount + i) / 4) % sg.bass.length]), beat * 3.6, 'sine', .06, null, delay + i * beat); }
     beatCount += d; nextNote += d * beat; noteIdx++;
   }
 }
@@ -1509,6 +1533,7 @@ let score = 0, spawnIn = 1, hintT = 0, thrown = false, lastT = 0, clock = 0, sce
 function changeScene(i) {
   sceneIdx = i; spots.forEach(s => s.cat = null); layout(); spawnIn = 1.2;
   confetti(); sfx.fanfare(); showToast(`Nouveau décor : ${SCENES[i].name} !`, true);
+  if (musicTimer) { const a = audio(); if (a) { nextNote = a.currentTime + 1.2; noteIdx = 0; beatCount = 0; } }
 }
 const balls = [], parts = [];
 
