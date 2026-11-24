@@ -170,6 +170,7 @@ const ANIMALS = [
   { id: 'cheval', name: 'Cheval', label: 'le cheval', species: 'horse', fur: '#A8673A', dark: '#4A2C1A', light: '#EBCFAE', eye: '#2F2540' },
   { id: 'hibou',  name: 'Hibou',  label: 'le hibou',  species: 'owl',   fur: '#9C7A5A', dark: '#6B4E34', light: '#F3E3C8', eye: '#FFC93C' },
   { id: 'renard', name: 'Renard', label: 'le renard', species: 'fox',   fur: '#F07A2A', dark: '#2F2540', light: '#FFF6EA', eye: '#2F2540' },
+  { id: 'hamster', name: 'Hamster', label: 'le hamster', species: 'hamster', fur: '#F2B465', dark: '#C77E3A', light: '#FFF8EC', eye: '#2F2540' },
 ];
 const RARE_STYLES = [
   { id: 'etoile',    name: 'Étoile',      style: 'stars',   fur: '#CDB0F2', dark: '#9A6FD8', light: '#FFF1A8', eye: '#FF6FA8' },
@@ -392,6 +393,33 @@ function drawAnimal(x, y, s, c, opts) {
       drawEye(-.45 * s, -.2 * s, .15 * s, '#3A2A20', shut, happy); drawEye(.45 * s, -.2 * s, .15 * s, '#3A2A20', shut, happy);
       // mane tuft
       g.fillStyle = dark; for (const [a, b, r] of [[-.15, -.95, .2], [.08, -1.0, .22], [.28, -.88, .18]]) { circle(a * s, b * s, r * s); g.fill(); }
+    }
+  } else if (c.species === 'hamster') {
+    for (const side of [-1, 1]) {
+      circle(side * .68 * s, -.72 * s, .3 * s); g.fillStyle = rare ? fur : dark; g.fill(); g.stroke();
+      if (!sil) { circle(side * .68 * s, -.7 * s, .16 * s); g.fillStyle = '#F6A5B8'; g.fill(); }
+    }
+    const head = () => { g.beginPath(); g.ellipse(0, .05 * s, 1.12 * s, .9 * s, 0, 0, TAU); };
+    head(); g.fillStyle = fur; g.fill();
+    if (rare) rareOverlay(c.style, s, light, head);
+    if (!sil) {
+      g.save(); head(); g.clip(); g.fillStyle = light;
+      g.beginPath(); g.ellipse(0, .55 * s, .62 * s, .5 * s, 0, 0, TAU); g.fill();
+      g.beginPath(); g.moveTo(-.1 * s, -1 * s); g.lineTo(.1 * s, -1 * s); g.lineTo(.06 * s, -.25 * s); g.lineTo(-.06 * s, -.25 * s); g.closePath(); g.fill();
+      g.restore();
+      // puffy cheeks full of seeds
+      for (const side of [-1, 1]) { circle(side * .62 * s, .38 * s, .4 * s); g.fillStyle = light; g.fill(); g.lineWidth = s * .05; g.strokeStyle = INK; g.stroke(); }
+      g.fillStyle = 'rgba(255,120,150,.4)'; circle(-.68 * s, .35 * s, .14 * s); g.fill(); circle(.68 * s, .35 * s, .14 * s); g.fill();
+    }
+    g.lineWidth = s * .07; g.strokeStyle = line; head(); g.stroke();
+    if (!sil) {
+      drawEye(-.4 * s, -.18 * s, .15 * s, '#2F2540', shut, happy); drawEye(.4 * s, -.18 * s, .15 * s, '#2F2540', shut, happy);
+      g.beginPath(); g.ellipse(0, .16 * s, .11 * s, .08 * s, 0, 0, TAU); g.fillStyle = '#F07A9A'; g.fill();
+      g.fillStyle = '#FFFFFF'; g.fillRect(-.09 * s, .38 * s, .08 * s, .14 * s); g.fillRect(.01 * s, .38 * s, .08 * s, .14 * s);
+      g.lineWidth = s * .03; g.strokeStyle = INK; g.strokeRect(-.09 * s, .38 * s, .18 * s, .14 * s);
+      g.lineWidth = s * .045; g.beginPath(); g.moveTo(0, .24 * s); g.lineTo(0, .32 * s); g.quadraticCurveTo(-.12 * s, .4 * s, -.2 * s, .34 * s); g.moveTo(0, .32 * s); g.quadraticCurveTo(.12 * s, .4 * s, .2 * s, .34 * s); g.stroke();
+      g.lineWidth = s * .03; g.strokeStyle = 'rgba(47,37,64,.6)';
+      for (const side of [-1, 1]) for (const k of [-1, 1]) { g.beginPath(); g.moveTo(side * .25 * s, .2 * s + k * .04 * s); g.lineTo(side * .85 * s, .1 * s + k * .14 * s); g.stroke(); }
     }
   } else if (c.species === 'owl') {
     for (const side of [-1, 1]) { poly([[side * .35, -.7], [side * .78, -1.35], [side * .85, -.5]], s); g.fillStyle = dark; g.fill(); g.stroke(); }
@@ -1224,6 +1252,8 @@ function pickCat() {
     const rares = Math.random() < .3 ? RARE_ANIMALS : CATS.filter(c => c.rare && !c.species && !c.mystery);
     return rares[Math.floor(Math.random() * rares.length)];
   }
+  // hamsters love the backrooms
+  if (SCENES[sceneIdx].id === 'backrooms' && Math.random() < .35) return ANIMALS.find(a => a.species === 'hamster');
   if (Math.random() < .22) return ANIMALS[Math.floor(Math.random() * ANIMALS.length)];
   const pool = CATS.filter(c => !c.rare && !c.species); return pool[Math.floor(Math.random() * pool.length)];
 }

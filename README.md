@@ -15,7 +15,7 @@ Ouvrir `catchACat.html` dans un navigateur, ou l'héberger (Netlify, GitHub Page
 ## Feuille de route
 
 1. Prototype jouable (fait)
-2. Enrichir le jeu pour l'enfant : 8 décors (jardin, maison, chambre, forêt, usine à jouets, toit la nuit, nuages, backrooms), chats avec du caractère (malin, timide, chaton), 18 chats et 20 amis animaux (chien, cheval, hibou, renard, chacun en version normale et en 4 versions rares), dont le caracal, le tuxedo et 4 chats rares (Étoile, Poisson, Soleil, Multicolore), 5 chats mystérieux encore plus rares (Aigle, Ange, Glace, Saturne, Mystérieux), 10 chapeaux, accessoires et costumes à gagner (nœud, cache-oreilles, couronne, collier de perles, chapeau à écailles, chapeau de fête, pyjama, chapeau de magicien, costume de roi, costume lunaire) et musique de fond (fait)
+2. Enrichir le jeu pour l'enfant : 8 décors (jardin, maison, chambre, forêt, usine à jouets, toit la nuit, nuages, backrooms), chats avec du caractère (malin, timide, chaton), 18 chats et 25 amis animaux (chien, cheval, hibou, renard, hamster, chacun en version normale et en 4 versions rares), dont le caracal, le tuxedo et 4 chats rares (Étoile, Poisson, Soleil, Multicolore), 5 chats mystérieux encore plus rares (Aigle, Ange, Glace, Saturne, Mystérieux), 10 chapeaux, accessoires et costumes à gagner (nœud, cache-oreilles, couronne, collier de perles, chapeau à écailles, chapeau de fête, pyjama, chapeau de magicien, costume de roi, costume lunaire) et musique de fond (fait)
 3. Emballer le jeu avec Capacitor pour l'App Store et Google Play
 
 ## Appli Android (étape 3)
