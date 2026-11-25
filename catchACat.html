@@ -1575,7 +1575,7 @@ let level = LEVELS.small;
 let score = 0, spawnIn = 1, hintT = 0, thrown = false, lastT = 0, clock = 0, sceneChangeIn = 0, saidHop = false;
 function changeScene(i) {
   sceneIdx = i; spots.forEach(s => s.cat = null); layout(); spawnIn = 1.2;
-  confetti(); sfx.fanfare(); showToast(`Nouveau décor : ${SCENES[i].name} !`, true);
+  confetti(); ballRain(); sfx.fanfare(); showToast(`Nouveau décor : ${SCENES[i].name} !`, true);
   if (musicTimer) { const a = audio(); if (a) { nextNote = a.currentTime + 1.2; noteIdx = 0; beatCount = 0; } }
 }
 const balls = [], parts = [];
@@ -1674,6 +1674,10 @@ function resolve(b) {
   }
 }
 
+// a shower of bouncing balls to celebrate a new scene
+function ballRain() {
+  for (let i = 0; i < 22; i++) parts.push({ kind: 'ball', x: rnd(0, W), y: rnd(-H * .5, -S), vx: rnd(-60, 60), vy: rnd(60, 200), life: rnd(4.5, 5.5), r: S * rnd(.35, .6), rot: rnd(0, TAU), floor: H * rnd(.86, .96) });
+}
 function confetti() {
   const cols = ['#FF6B6B', '#FFC93C', '#6CC24A', '#4FA3E0', '#CDB0F2', '#FF8FB1'];
   for (let i = 0; i < 70; i++) parts.push({ kind: 'conf', x: rnd(0, W), y: rnd(-H * .2, 0), vx: rnd(-40, 40), vy: rnd(60, 200), life: 3, r: S * rnd(.12, .2), col: cols[i % cols.length], rot: rnd(0, TAU), vr: rnd(-6, 6) });
@@ -1712,6 +1716,11 @@ function update(dt) {
     p.x += p.vx * dt; p.y += p.vy * dt;
     if (p.kind === 'star') { p.vx *= .92; p.vy *= .92; }
     if (p.kind === 'conf') { p.rot += p.vr * dt; p.vx += Math.sin(clock * 3 + i) * 20 * dt; }
+    if (p.kind === 'ball') {
+      p.vy += S * 16 * dt; p.rot += p.vx / p.r * dt;
+      if (p.y > p.floor - p.r && p.vy > 0) { p.y = p.floor - p.r; p.vy *= -.62; p.vx *= .9; if (p.vy > -S * 1.5) p.vy = 0; }
+      if (p.x < p.r || p.x > W - p.r) p.vx = -p.vx;
+    }
   }
   if (mode === 'play' && !thrown) hintT += dt;
 }
@@ -1771,6 +1780,7 @@ function render() {
     g.globalAlpha = Math.min(1, p.life * 2); g.fillStyle = p.col;
     if (p.kind === 'heart') { heart(p.x, p.y, p.r); g.fill(); }
     else if (p.kind === 'star') { star(p.x, p.y, p.r); g.fill(); }
+    else if (p.kind === 'ball') drawBall(p.x, p.y, p.r, p.rot);
     else { g.save(); g.translate(p.x, p.y); g.rotate(p.rot); g.fillRect(-p.r, -p.r * .5, p.r * 2, p.r); g.restore(); }
   }
   g.globalAlpha = 1;
