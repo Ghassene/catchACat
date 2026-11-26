@@ -72,7 +72,9 @@ button:focus-visible { outline: 4px solid var(--sun); outline-offset: 3px; }
 .big-btn:active { transform: translateY(4px); box-shadow: 0 1px 0 var(--ink); }
 .lvl-small { background: #A8E6A1; }
 .lvl-big { background: var(--sun); }
-.lvl-ultra { background: #FF8A65; grid-column: 1 / -1; }
+.lvl-ultra { background: #FF8A65; }
+.lvl-mega { background: #E05A9A; color: #fff; }
+.lvl-mega small { color: rgba(255,255,255,.9); }
 .link-btn { background: none; border: 0; font: 800 17px var(--body); color: var(--ink); text-decoration: underline; text-underline-offset: 4px; cursor: pointer; padding: 6px; justify-self: center; }
 
 .grid-title { grid-column: 1 / -1; margin: 6px 0 0; font-family: var(--display); font-size: 22px; line-height: 1; text-align: left; }
@@ -128,6 +130,7 @@ button:focus-visible { outline: 4px solid var(--sun); outline-offset: 3px; }
         <button class="big-btn lvl-small" id="play-small">Petit joueur<small>5 à 7 ans · chats lents</small></button>
         <button class="big-btn lvl-big" id="play-big">Grand joueur<small>8 à 10 ans · chats rapides</small></button>
         <button class="big-btn lvl-ultra" id="play-ultra">Ultra rapide<small>11 à 14 ans · chats éclair</small></button>
+        <button class="big-btn lvl-mega" id="play-mega">Méga rapide<small>15 à 17 ans · chats fusées</small></button>
       </div>
       <button class="link-btn" id="menu-collection">Voir ma collection</button>
     </div>
@@ -236,6 +239,7 @@ const LEVELS = {
   small: { dur: 3.8, maxCats: 2, gap: [0.6, 1.4], hit: 1.75 },
   big:   { dur: 2.3, maxCats: 3, gap: [0.35, 1.0], hit: 1.25 },
   ultra: { dur: 1.35, maxCats: 4, gap: [0.18, 0.55], hit: 1.0, ball: .34 },
+  mega:  { dur: 0.9, maxCats: 5, gap: [0.1, 0.35], hit: .85, ball: .26 },
 };
 
 /* ---------- save ---------- */
@@ -1903,6 +1907,7 @@ function home() { stopMusic(); mode = 'menu'; hud.hidden = true; coll.hidden = t
 $('play-small').addEventListener('click', () => start('small'));
 $('play-big').addEventListener('click', () => start('big'));
 $('play-ultra').addEventListener('click', () => start('ultra'));
+$('play-mega').addEventListener('click', () => start('mega'));
 $('menu-collection').addEventListener('click', openCollection);
 $('btn-collection').addEventListener('click', openCollection);
 $('coll-close').addEventListener('click', closeCollection);
