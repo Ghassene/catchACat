@@ -171,6 +171,8 @@ const CATS = [
   { id: 'poisson',   name: 'Poisson',   fur: '#7CC8E8', dark: '#3B86C4', light: '#E6F7FF', eye: '#FF9F43', pattern: 'fish', rare: true },
   { id: 'soleil',    name: 'Soleil',    fur: '#FFD45A', dark: '#F28C28', light: '#FFF6D0', eye: '#E8577A', pattern: 'sun', rare: true },
   { id: 'alien',     name: 'Extraterrestre', fur: '#9BE37E', dark: '#4FAE5A', light: '#E6FFD8', eye: '#B05CE8', pattern: 'alien', nose: '#B05CE8', rare: true },
+  { id: 'geo',       name: 'Géographie', fur: '#5FB4E8', dark: '#2E7FC0', light: '#E6F7FF', eye: '#F5C531', pattern: 'geo', whisk: '#FFFFFF', rare: true },
+  { id: 'maths',     name: 'Maths',     fur: '#FFF6E0', dark: '#E8577A', light: '#FFFFFF', eye: '#5BA84A', pattern: 'math', rare: true },
   { id: 'arcenciel', name: 'Multicolore', fur: '#FF6B6B', dark: '#FF6B6B', light: '#FFFFFF', eye: '#4FA3E0', pattern: 'rainbow', rare: true },
   // mysterious: even rarer than the rare ones
   { id: 'aigle',      name: 'Aigle',      fur: '#F7F1E6', dark: '#7A4E26', light: '#FFFFFF', eye: '#F5C531', pattern: 'eagle',   ear: '#7A4E26', nose: '#F5B031', rare: true, mystery: true },
@@ -690,7 +692,7 @@ function drawCat(x, y, s, c, opts = {}) {
     } else if (c.pattern === 'stars') {
       g.fillStyle = c.light;
       [[-.55, -.5, .16], [.5, -.6, .13], [.0, -.72, .1], [.75, -.1, .1], [-.8, -.05, .09]].forEach(([a, b, r]) => { star(a * s, b * s, r * s); g.fill(); });
-    } else if (c.mystery || c.pattern === 'backroom' || c.pattern === 'alien') mysteryOverlay(c, s);
+    } else if (c.mystery || ['backroom', 'alien', 'geo', 'math'].includes(c.pattern)) mysteryOverlay(c, s);
     // muzzle
     g.fillStyle = c.light;
     const mr = c.pattern === 'muzzle' || c.pattern === 'tuxedo' ? .38 : .3;
@@ -823,6 +825,20 @@ function mysteryOverlay(c, s) {
   } else if (c.pattern === 'saturn') {
     g.fillStyle = c.dark; g.fillRect(-1.2 * s, -.78 * s, 2.4 * s, .14 * s); g.fillRect(-1.2 * s, -.48 * s, 2.4 * s, .1 * s);
     g.fillStyle = c.light; g.fillRect(-1.2 * s, -.62 * s, 2.4 * s, .1 * s);
+  } else if (c.pattern === 'geo') {
+    // a little planet: green continents and lines of latitude and longitude
+    g.fillStyle = '#7ED35A';
+    const land = [[[-.95, -.55], [-.55, -.8], [-.3, -.55], [-.45, -.2], [-.75, -.1], [-1.0, -.25]], [[.25, -.85], [.65, -.7], [.75, -.35], [.45, -.3], [.3, -.5]], [[.6, .05], [.95, -.05], [1.05, .3], [.8, .45]], [[-1.05, .15], [-.75, .25], [-.85, .5], [-1.1, .45]]];
+    land.forEach(pts => { poly(pts, s); g.fill(); });
+    g.strokeStyle = 'rgba(255,255,255,.55)'; g.lineWidth = s * .035;
+    for (const y of [-.6, -.25]) { g.beginPath(); g.moveTo(-1.1 * s, y * s); g.lineTo(1.1 * s, y * s); g.stroke(); }
+    g.beginPath(); g.ellipse(0, 0, .55 * s, .95 * s, 0, 0, TAU); g.stroke();
+  } else if (c.pattern === 'math') {
+    // numbers and signs written all over its fur
+    g.textAlign = 'center'; g.textBaseline = 'middle';
+    [['+', -.6, -.55, '#E8577A', .36], ['×', .55, -.6, '#4FA3E0', .34], ['2', -.15, -.75, '#F28C28', .3], ['=', .2, -.45, '#9A6FD8', .3], ['3', -.85, -.1, '#5BA84A', .26], ['÷', .85, -.15, '#E8577A', .28], ['1', .0, -.42, '#4FA3E0', .22]].forEach(([ch, a, b, col, r]) => {
+      g.fillStyle = col; g.font = `800 ${r * s}px "Baloo 2", system-ui, sans-serif`; g.fillText(ch, a * s, b * s);
+    });
   } else if (c.pattern === 'alien') {
     g.fillStyle = c.dark;
     [[-.7, -.45, .16], [.75, -.3, .12], [-.35, -.75, .09], [.45, -.72, .1], [-.85, .1, .08]].forEach(([a, b, r]) => { circle(a * s, b * s, r * s); g.fill(); });
@@ -846,6 +862,21 @@ function mysteryFront(c, s) {
     g.lineWidth = s * .17; g.strokeStyle = INK; g.stroke();
     g.lineWidth = s * .1; g.strokeStyle = '#FFD45A'; g.stroke();
   } else if (c.pattern === 'saturn') saturnRing(s, true);
+  else if (c.pattern === 'math') {
+    // round glasses
+    g.lineWidth = s * .06; g.strokeStyle = INK;
+    for (const side of [-1, 1]) { g.beginPath(); g.arc(side * .42 * s, -.12 * s, .33 * s, 0, TAU); g.stroke(); }
+    g.beginPath(); g.moveTo(-.09 * s, -.16 * s); g.quadraticCurveTo(0, -.24 * s, .09 * s, -.16 * s); g.stroke();
+    g.beginPath(); g.moveTo(-.75 * s, -.15 * s); g.lineTo(-.98 * s, -.25 * s); g.moveTo(.75 * s, -.15 * s); g.lineTo(.98 * s, -.25 * s); g.stroke();
+  }
+  else if (c.pattern === 'geo') {
+    // a tiny compass rose on the forehead
+    g.save(); g.translate(0, -.62 * s);
+    g.fillStyle = '#FFFFFF'; g.strokeStyle = INK; g.lineWidth = s * .03;
+    poly([[0, -.2], [.06, 0], [0, .2], [-.06, 0]], s); g.fill(); g.stroke();
+    g.fillStyle = '#E8443A'; poly([[0, -.2], [.06, 0], [-.06, 0]], s); g.fill();
+    g.restore();
+  }
   else if (c.pattern === 'alien') {
     // the third eye in the middle of the forehead
     g.beginPath(); g.ellipse(0, -.55 * s, .17 * s, .2 * s, 0, 0, TAU); g.fillStyle = '#fff'; g.fill(); g.lineWidth = s * .045; g.strokeStyle = INK; g.stroke();
