@@ -65,7 +65,7 @@ button:focus-visible { outline: 4px solid var(--sun); outline-offset: 3px; }
 .sheet h2 { font-family: var(--display); font-size: 34px; margin: 0; line-height: 1; }
 .sheet p { margin: 0; font-size: 18px; color: var(--ink); text-wrap: balance; }
 .levels { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-@media (max-width: 420px) { .levels { grid-template-columns: 1fr; } }
+@media (max-width: 420px) { .levels { grid-template-columns: 1fr; gap: 8px; } .levels .big-btn { font-size: 20px; padding: 8px 8px 7px; } }
 .big-btn { font-family: var(--display); font-size: 24px; line-height: 1.05; border: 3px solid var(--ink); border-radius: 20px; padding: 14px 10px 12px;
   cursor: pointer; box-shadow: 0 5px 0 var(--ink); color: var(--ink); display: grid; gap: 2px; }
 .big-btn small { font-family: var(--body); font-size: 14px; font-weight: 800; opacity: .8; }
@@ -75,7 +75,8 @@ button:focus-visible { outline: 4px solid var(--sun); outline-offset: 3px; }
 .lvl-ultra { background: #FF8A65; }
 .lvl-mega { background: #E05A9A; color: #fff; }
 .lvl-mega small { color: rgba(255,255,255,.9); }
-.lvl-hyper { background: #6A3FB8; color: #fff; grid-column: 1 / -1; }
+.lvl-hyper { background: #6A3FB8; color: #fff; }
+.lvl-minus { background: #9ED8F5; }
 .lvl-hyper small { color: rgba(255,255,255,.9); }
 .link-btn { background: none; border: 0; font: 800 17px var(--body); color: var(--ink); text-decoration: underline; text-underline-offset: 4px; cursor: pointer; padding: 6px; justify-self: center; }
 
@@ -129,11 +130,12 @@ button:focus-visible { outline: 4px solid var(--sun); outline-offset: 3px; }
       <h1>Attrape-Minou</h1>
       <p>Des chats se cachent partout. Touche un chat quand il sort la tête pour lui lancer la balle ! Tous les 10 chats, tu découvres un nouveau décor.</p>
       <div class="levels">
+        <button class="big-btn lvl-minus" id="play-minus">Minus joueur<small>2 à 4 ans · chats tout doux</small></button>
         <button class="big-btn lvl-small" id="play-small">Petit joueur<small>5 à 7 ans · chats lents</small></button>
         <button class="big-btn lvl-big" id="play-big">Grand joueur<small>8 à 10 ans · chats rapides</small></button>
         <button class="big-btn lvl-ultra" id="play-ultra">Ultra rapide<small>11 à 14 ans · chats éclair</small></button>
         <button class="big-btn lvl-mega" id="play-mega">Méga rapide<small>15 à 17 ans · chats fusées</small></button>
-        <button class="big-btn lvl-hyper" id="play-hyper">Méga super rapide<small>18 à 21 ans · chats éclair de l'espace</small></button>
+        <button class="big-btn lvl-hyper" id="play-hyper">Méga super rapide<small>18 à 21 ans · chats de l'espace</small></button>
       </div>
       <button class="link-btn" id="menu-collection">Voir ma collection</button>
     </div>
@@ -239,6 +241,7 @@ function rollEyes() {
   return null;
 }
 const LEVELS = {
+  minus: { dur: 6.5, maxCats: 1, gap: [1.0, 1.8], hit: 2.8, ball: .6 },
   small: { dur: 3.8, maxCats: 2, gap: [0.6, 1.4], hit: 1.75 },
   big:   { dur: 2.3, maxCats: 3, gap: [0.35, 1.0], hit: 1.25 },
   ultra: { dur: 1.35, maxCats: 4, gap: [0.18, 0.55], hit: 1.0, ball: .34 },
@@ -1626,7 +1629,7 @@ function spawn() {
   const sp = free[Math.floor(Math.random() * free.length)];
   const type = pickCat();
   let trait = 'normal';
-  if (mode === 'play' && !type.species) { const r = Math.random(); trait = r < .12 ? 'kitten' : r < .27 ? 'clever' : r < .42 ? 'shy' : 'normal'; }
+  if (mode === 'play' && !type.species && level !== LEVELS.minus) { const r = Math.random(); trait = r < .12 ? 'kitten' : r < .27 ? 'clever' : r < .42 ? 'shy' : 'normal'; }
   sp.cat = { type, trait, eyes: rollEyes(), k: trait === 'kitten' ? .7 : 1, maxPop: trait === 'shy' ? .8 : 1, hopped: false,
     age: 0, dur: (mode === 'play' ? level.dur : 3) * (type.rare ? .8 : 1) * rnd(.9, 1.15), state: 'up', blinkAt: rnd(.6, 1.6), ct: 0, popAtCatch: 0 };
   if (mode === 'play') sfx.pop();
@@ -1908,6 +1911,7 @@ function closeCollection() {
 }
 function home() { stopMusic(); mode = 'menu'; hud.hidden = true; coll.hidden = true; menu.hidden = false; balls.length = 0; sceneChangeIn = 0; if (sceneIdx) { sceneIdx = 0; spots.forEach(s => s.cat = null); layout(); } }
 
+$('play-minus').addEventListener('click', () => start('minus'));
 $('play-small').addEventListener('click', () => start('small'));
 $('play-big').addEventListener('click', () => start('big'));
 $('play-ultra').addEventListener('click', () => start('ultra'));
